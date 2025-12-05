@@ -6,9 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Package, Edit, Trash2, Loader2 } from 'lucide-react';
+import { FILAMENT_MATERIALS, FILAMENT_COLORS } from '@/lib/filamentData';
 
 interface FilamentType {
   id: string;
@@ -33,10 +35,13 @@ export default function Filaments() {
     name: '',
     material: '',
     color: '',
+    customColor: '',
     spool_weight_grams: '1000',
     spool_cost: '',
     cost_per_gram: '',
   });
+
+  const [customColors, setCustomColors] = useState<string[]>([]);
 
   useEffect(() => {
     fetchFilaments();
@@ -45,7 +50,14 @@ export default function Filaments() {
   async function fetchFilaments() {
     if (!user) return;
     const { data } = await supabase.from('filaments').select('*').order('created_at', { ascending: false });
-    if (data) setFilaments(data);
+    if (data) {
+      setFilaments(data);
+      // Extract custom colors from existing filaments
+      const existingColors = data
+        .map(f => f.color)
+        .filter((c): c is string => c !== null && !FILAMENT_COLORS.includes(c as any));
+      setCustomColors([...new Set(existingColors)]);
+    }
     setLoading(false);
   }
 
@@ -54,6 +66,7 @@ export default function Filaments() {
       name: '',
       material: '',
       color: '',
+      customColor: '',
       spool_weight_grams: '1000',
       spool_cost: '',
       cost_per_gram: '',
@@ -63,15 +76,44 @@ export default function Filaments() {
 
   function openEditDialog(filament: FilamentType) {
     setEditingFilament(filament);
+    const isCustomColor = filament.color && !FILAMENT_COLORS.includes(filament.color as any);
     setForm({
       name: filament.name,
       material: filament.material || '',
-      color: filament.color || '',
+      color: isCustomColor ? '__custom__' : (filament.color || ''),
+      customColor: isCustomColor ? filament.color || '' : '',
       spool_weight_grams: filament.spool_weight_grams?.toString() || '1000',
       spool_cost: filament.spool_cost?.toString() || '',
       cost_per_gram: filament.cost_per_gram.toString(),
     });
     setDialogOpen(true);
+  }
+
+  // Auto-generate name when material or color changes
+  function updateAutoName(material: string, color: string) {
+    if (!editingFilament && material && color) {
+      const colorName = color === '__custom__' ? form.customColor : color;
+      if (colorName) {
+        setForm(prev => ({ ...prev, name: `${material} ${colorName}` }));
+      }
+    }
+  }
+
+  function handleMaterialChange(material: string) {
+    setForm(prev => ({ ...prev, material }));
+    updateAutoName(material, form.color);
+  }
+
+  function handleColorChange(color: string) {
+    setForm(prev => ({ ...prev, color, customColor: color === '__custom__' ? prev.customColor : '' }));
+    updateAutoName(form.material, color);
+  }
+
+  function handleCustomColorChange(customColor: string) {
+    setForm(prev => ({ ...prev, customColor }));
+    if (form.material) {
+      setForm(prev => ({ ...prev, name: prev.name || `${form.material} ${customColor}` }));
+    }
   }
 
   // Auto-calculate cost per gram when spool info changes
@@ -93,11 +135,13 @@ export default function Filaments() {
 
     setSaving(true);
 
+    const finalColor = form.color === '__custom__' ? form.customColor.trim() : form.color.trim();
+
     const data = {
       user_id: user.id,
       name: form.name.trim(),
       material: form.material.trim() || null,
-      color: form.color.trim() || null,
+      color: finalColor || null,
       spool_weight_grams: parseFloat(form.spool_weight_grams) || null,
       spool_cost: parseFloat(form.spool_cost) || null,
       cost_per_gram: parseFloat(form.cost_per_gram) || 0.02,
@@ -137,6 +181,8 @@ export default function Filaments() {
     }
   }
 
+  const allColors = [...FILAMENT_COLORS, ...customColors];
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-slide-up">
@@ -152,12 +198,54 @@ export default function Filaments() {
                 Add Filament
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingFilament ? 'Edit Filament' : 'Add Filament'}</DialogTitle>
                 <DialogDescription>Enter filament details for accurate cost tracking</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="material">Material</Label>
+                    <Select value={form.material} onValueChange={handleMaterialChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select material" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FILAMENT_MATERIALS.map((material) => (
+                          <SelectItem key={material} value={material}>{material}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="color">Color</Label>
+                    <Select value={form.color} onValueChange={handleColorChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select color" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allColors.map((color) => (
+                          <SelectItem key={color} value={color}>{color}</SelectItem>
+                        ))}
+                        <SelectItem value="__custom__">+ Add new color</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {form.color === '__custom__' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="customColor">New Color Name</Label>
+                    <Input
+                      id="customColor"
+                      value={form.customColor}
+                      onChange={(e) => handleCustomColorChange(e.target.value)}
+                      placeholder="e.g. Midnight Blue"
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="name">Filament Name *</Label>
                   <Input
@@ -167,27 +255,9 @@ export default function Filaments() {
                     placeholder="e.g. PLA+ Black"
                     required
                   />
+                  <p className="text-xs text-muted-foreground">Auto-generated from material + color, or enter custom</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="material">Material</Label>
-                    <Input
-                      id="material"
-                      value={form.material}
-                      onChange={(e) => setForm({ ...form, material: e.target.value })}
-                      placeholder="e.g. PLA, PETG"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="color">Color</Label>
-                    <Input
-                      id="color"
-                      value={form.color}
-                      onChange={(e) => setForm({ ...form, color: e.target.value })}
-                      placeholder="e.g. Black"
-                    />
-                  </div>
-                </div>
+
                 <div className="p-4 rounded-xl bg-muted/50 space-y-4">
                   <p className="text-sm font-medium">Calculate from spool</p>
                   <div className="grid grid-cols-2 gap-4">
