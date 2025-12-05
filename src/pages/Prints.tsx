@@ -512,10 +512,10 @@ export default function Prints() {
                         </div>
                         <div className="space-y-2">
                           <Label className="flex items-center gap-2"><Truck className="w-4 h-4" />Shipping Option</Label>
-                          <Select value={form.shipping_option_id} onValueChange={(v) => setForm({ ...form, shipping_option_id: v })}>
+                          <Select value={form.shipping_option_id || "none"} onValueChange={(v) => setForm({ ...form, shipping_option_id: v === "none" ? "" : v })}>
                             <SelectTrigger><SelectValue placeholder="No shipping" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">No shipping</SelectItem>
+                              <SelectItem value="none">No shipping</SelectItem>
                               {shippingOptions.filter(s => s.is_active).map((s) => (
                                 <SelectItem key={s.id} value={s.id}>{s.name} - €{s.price.toFixed(2)}</SelectItem>
                               ))}
