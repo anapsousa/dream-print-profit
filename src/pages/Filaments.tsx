@@ -9,12 +9,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Package, Edit, Trash2, Loader2 } from 'lucide-react';
-import { FILAMENT_MATERIALS, FILAMENT_COLORS } from '@/lib/filamentData';
+import { Plus, Package, Edit, Trash2, Loader2, Sparkles } from 'lucide-react';
+import { FILAMENT_MATERIALS, FILAMENT_COLORS, FILAMENT_BRANDS, FILAMENT_PRESETS, getFilamentPreset, getMaterialsForBrand } from '@/lib/filamentData';
 
 interface FilamentType {
   id: string;
   name: string;
+  brand: string | null;
   material: string | null;
   color: string | null;
   spool_weight_grams: number | null;
@@ -33,6 +34,7 @@ export default function Filaments() {
 
   const [form, setForm] = useState({
     name: '',
+    brand: '',
     material: '',
     color: '',
     customColor: '',
@@ -42,16 +44,30 @@ export default function Filaments() {
   });
 
   const [customColors, setCustomColors] = useState<string[]>([]);
+  const [availableMaterials, setAvailableMaterials] = useState<string[]>([]);
 
   useEffect(() => {
     fetchFilaments();
   }, [user]);
 
+  useEffect(() => {
+    if (form.brand && form.brand !== 'Other') {
+      const brandMaterials = getMaterialsForBrand(form.brand);
+      if (brandMaterials.length > 0) {
+        setAvailableMaterials(brandMaterials);
+      } else {
+        setAvailableMaterials([...FILAMENT_MATERIALS]);
+      }
+    } else {
+      setAvailableMaterials([...FILAMENT_MATERIALS]);
+    }
+  }, [form.brand]);
+
   async function fetchFilaments() {
     if (!user) return;
     const { data } = await supabase.from('filaments').select('*').order('created_at', { ascending: false });
     if (data) {
-      setFilaments(data);
+      setFilaments(data as FilamentType[]);
       // Extract custom colors from existing filaments
       const existingColors = data
         .map(f => f.color)
@@ -64,6 +80,7 @@ export default function Filaments() {
   function resetForm() {
     setForm({
       name: '',
+      brand: '',
       material: '',
       color: '',
       customColor: '',
@@ -79,6 +96,7 @@ export default function Filaments() {
     const isCustomColor = filament.color && !FILAMENT_COLORS.includes(filament.color as any);
     setForm({
       name: filament.name,
+      brand: filament.brand || '',
       material: filament.material || '',
       color: isCustomColor ? '__custom__' : (filament.color || ''),
       customColor: isCustomColor ? filament.color || '' : '',
@@ -90,29 +108,53 @@ export default function Filaments() {
   }
 
   // Auto-generate name when material or color changes
-  function updateAutoName(material: string, color: string) {
-    if (!editingFilament && material && color) {
+  function updateAutoName(brand: string, material: string, color: string) {
+    if (!editingFilament && (brand || material) && color) {
       const colorName = color === '__custom__' ? form.customColor : color;
       if (colorName) {
-        setForm(prev => ({ ...prev, name: `${material} ${colorName}` }));
+        const nameParts = [brand, material, colorName].filter(Boolean);
+        setForm(prev => ({ ...prev, name: nameParts.join(' ') }));
       }
     }
   }
 
+  function handleBrandChange(brand: string) {
+    setForm(prev => ({ ...prev, brand, material: '' }));
+  }
+
   function handleMaterialChange(material: string) {
     setForm(prev => ({ ...prev, material }));
-    updateAutoName(material, form.color);
+    
+    // Try to auto-fill from preset
+    const preset = getFilamentPreset(form.brand, material);
+    if (preset) {
+      setForm(prev => ({
+        ...prev,
+        material,
+        name: preset.name,
+        spool_cost: preset.spoolCost.toString(),
+        spool_weight_grams: (preset.spoolWeightKg * 1000).toString(),
+        cost_per_gram: (preset.costPerKg / 1000).toFixed(4),
+      }));
+      toast({
+        title: 'Preset applied',
+        description: `Cost: €${preset.costPerKg}/kg`,
+      });
+    } else {
+      updateAutoName(form.brand, material, form.color);
+    }
   }
 
   function handleColorChange(color: string) {
     setForm(prev => ({ ...prev, color, customColor: color === '__custom__' ? prev.customColor : '' }));
-    updateAutoName(form.material, color);
+    updateAutoName(form.brand, form.material, color);
   }
 
   function handleCustomColorChange(customColor: string) {
     setForm(prev => ({ ...prev, customColor }));
-    if (form.material) {
-      setForm(prev => ({ ...prev, name: prev.name || `${form.material} ${customColor}` }));
+    if (form.material || form.brand) {
+      const nameParts = [form.brand, form.material, customColor].filter(Boolean);
+      setForm(prev => ({ ...prev, name: prev.name || nameParts.join(' ') }));
     }
   }
 
@@ -140,6 +182,7 @@ export default function Filaments() {
     const data = {
       user_id: user.id,
       name: form.name.trim(),
+      brand: form.brand.trim() || null,
       material: form.material.trim() || null,
       color: finalColor || null,
       spool_weight_grams: parseFloat(form.spool_weight_grams) || null,
@@ -182,6 +225,7 @@ export default function Filaments() {
   }
 
   const allColors = [...FILAMENT_COLORS, ...customColors];
+  const showPresetNotice = form.brand && form.material && getFilamentPreset(form.brand, form.material);
 
   return (
     <AppLayout>
@@ -201,9 +245,23 @@ export default function Filaments() {
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingFilament ? 'Edit Filament' : 'Add Filament'}</DialogTitle>
-                <DialogDescription>Enter filament details for accurate cost tracking</DialogDescription>
+                <DialogDescription>Select a brand to use preset prices, or enter manually</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="brand">Brand</Label>
+                  <Select value={form.brand} onValueChange={handleBrandChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FILAMENT_BRANDS.map((brand) => (
+                        <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="material">Material</Label>
@@ -212,7 +270,7 @@ export default function Filaments() {
                         <SelectValue placeholder="Select material" />
                       </SelectTrigger>
                       <SelectContent>
-                        {FILAMENT_MATERIALS.map((material) => (
+                        {availableMaterials.map((material) => (
                           <SelectItem key={material} value={material}>{material}</SelectItem>
                         ))}
                       </SelectContent>
@@ -255,8 +313,17 @@ export default function Filaments() {
                     placeholder="e.g. PLA+ Black"
                     required
                   />
-                  <p className="text-xs text-muted-foreground">Auto-generated from material + color, or enter custom</p>
+                  <p className="text-xs text-muted-foreground">Auto-generated from brand + material + color, or enter custom</p>
                 </div>
+
+                {showPresetNotice && (
+                  <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-secondary mt-0.5" />
+                    <p className="text-sm text-secondary">
+                      Prices auto-filled from preset database
+                    </p>
+                  </div>
+                )}
 
                 <div className="p-4 rounded-xl bg-muted/50 space-y-4">
                   <p className="text-sm font-medium">Calculate from spool</p>
@@ -339,8 +406,8 @@ export default function Filaments() {
                       </div>
                       <div>
                         <CardTitle className="text-lg">{filament.name}</CardTitle>
-                        {(filament.material || filament.color) && (
-                          <CardDescription>{[filament.material, filament.color].filter(Boolean).join(' • ')}</CardDescription>
+                        {(filament.brand || filament.material || filament.color) && (
+                          <CardDescription>{[filament.brand, filament.material, filament.color].filter(Boolean).join(' • ')}</CardDescription>
                         )}
                       </div>
                     </div>
@@ -358,6 +425,10 @@ export default function Filaments() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cost per gram</span>
                     <span className="font-medium">€{filament.cost_per_gram.toFixed(4)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Cost per kg</span>
+                    <span className="font-medium">€{(filament.cost_per_gram * 1000).toFixed(2)}</span>
                   </div>
                   {filament.spool_cost && (
                     <div className="flex justify-between">

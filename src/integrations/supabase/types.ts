@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      consumables: {
+        Row: {
+          cost: number
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cost?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       electricity_settings: {
         Row: {
           contracted_power_kva: number
@@ -52,6 +82,7 @@ export type Database = {
       }
       filaments: {
         Row: {
+          brand: string | null
           color: string | null
           cost_per_gram: number
           created_at: string
@@ -64,6 +95,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          brand?: string | null
           color?: string | null
           cost_per_gram?: number
           created_at?: string
@@ -76,6 +108,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          brand?: string | null
           color?: string | null
           cost_per_gram?: number
           created_at?: string
@@ -119,13 +152,42 @@ export type Database = {
         }
         Relationships: []
       }
+      labor_settings: {
+        Row: {
+          created_at: string
+          id: string
+          post_processing_rate_per_hour: number
+          preparation_rate_per_hour: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_processing_rate_per_hour?: number
+          preparation_rate_per_hour?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_processing_rate_per_hour?: number
+          preparation_rate_per_hour?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       printers: {
         Row: {
           brand: string | null
           created_at: string
           default_electricity_settings_id: string | null
+          depreciation_hours: number
           depreciation_months: number
           id: string
+          maintenance_cost: number
           model: string | null
           name: string
           notes: string | null
@@ -138,8 +200,10 @@ export type Database = {
           brand?: string | null
           created_at?: string
           default_electricity_settings_id?: string | null
+          depreciation_hours?: number
           depreciation_months?: number
           id?: string
+          maintenance_cost?: number
           model?: string | null
           name: string
           notes?: string | null
@@ -152,8 +216,10 @@ export type Database = {
           brand?: string | null
           created_at?: string
           default_electricity_settings_id?: string | null
+          depreciation_hours?: number
           depreciation_months?: number
           id?: string
+          maintenance_cost?: number
           model?: string | null
           name?: string
           notes?: string | null
@@ -174,6 +240,9 @@ export type Database = {
       }
       prints: {
         Row: {
+          additional_work_minutes: number | null
+          clean_supports_minutes: number | null
+          consumables_cost: number | null
           created_at: string
           discount_percent: number | null
           electricity_settings_id: string | null
@@ -182,13 +251,21 @@ export type Database = {
           filament_used_grams: number
           id: string
           name: string
+          preparation_time_minutes: number | null
+          print_start_time_minutes: number | null
           print_time_hours: number
           printer_id: string
           profit_margin_percent: number | null
+          remove_from_plate_minutes: number | null
+          shipping_option_id: string | null
+          slicing_time_minutes: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          additional_work_minutes?: number | null
+          clean_supports_minutes?: number | null
+          consumables_cost?: number | null
           created_at?: string
           discount_percent?: number | null
           electricity_settings_id?: string | null
@@ -197,13 +274,21 @@ export type Database = {
           filament_used_grams?: number
           id?: string
           name: string
+          preparation_time_minutes?: number | null
+          print_start_time_minutes?: number | null
           print_time_hours?: number
           printer_id: string
           profit_margin_percent?: number | null
+          remove_from_plate_minutes?: number | null
+          shipping_option_id?: string | null
+          slicing_time_minutes?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          additional_work_minutes?: number | null
+          clean_supports_minutes?: number | null
+          consumables_cost?: number | null
           created_at?: string
           discount_percent?: number | null
           electricity_settings_id?: string | null
@@ -212,9 +297,14 @@ export type Database = {
           filament_used_grams?: number
           id?: string
           name?: string
+          preparation_time_minutes?: number | null
+          print_start_time_minutes?: number | null
           print_time_hours?: number
           printer_id?: string
           profit_margin_percent?: number | null
+          remove_from_plate_minutes?: number | null
+          shipping_option_id?: string | null
+          slicing_time_minutes?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -240,7 +330,47 @@ export type Database = {
             referencedRelation: "printers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "prints_shipping_option_id_fkey"
+            columns: ["shipping_option_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_options"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      shipping_options: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_subscriptions: {
         Row: {

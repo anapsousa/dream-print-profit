@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Printer, Edit, Trash2, Loader2, Sparkles } from 'lucide-react';
-import { PRINTER_BRANDS, getModelsForBrand, getPrinterSpec } from '@/lib/printerData';
+import { PRINTER_BRANDS, getModelsForBrand, getPrinterSpec, hoursToMonths } from '@/lib/printerData';
 
 interface PrinterType {
   id: string;
@@ -20,6 +20,8 @@ interface PrinterType {
   model: string | null;
   purchase_cost: number;
   depreciation_months: number;
+  depreciation_hours: number;
+  maintenance_cost: number;
   power_watts: number;
   default_electricity_settings_id: string | null;
   notes: string | null;
@@ -44,14 +46,18 @@ export default function Printers() {
     name: '',
     brand: '',
     model: '',
+    customModel: '',
     purchase_cost: '',
     depreciation_months: '24',
+    depreciation_hours: '5000',
+    maintenance_cost: '0',
     power_watts: '200',
     default_electricity_settings_id: '',
     notes: '',
   });
 
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [useCustomModel, setUseCustomModel] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -62,6 +68,7 @@ export default function Printers() {
       setAvailableModels(getModelsForBrand(form.brand));
     } else {
       setAvailableModels([]);
+      setUseCustomModel(true);
     }
   }, [form.brand]);
 
@@ -73,7 +80,7 @@ export default function Printers() {
       supabase.from('electricity_settings').select('id, name'),
     ]);
 
-    if (printersRes.data) setPrinters(printersRes.data);
+    if (printersRes.data) setPrinters(printersRes.data as PrinterType[]);
     if (electricityRes.data) setElectricitySettings(electricityRes.data);
     setLoading(false);
   }
@@ -83,61 +90,87 @@ export default function Printers() {
       name: '',
       brand: '',
       model: '',
+      customModel: '',
       purchase_cost: '',
       depreciation_months: '24',
+      depreciation_hours: '5000',
+      maintenance_cost: '0',
       power_watts: '200',
       default_electricity_settings_id: '',
       notes: '',
     });
     setEditingPrinter(null);
     setAvailableModels([]);
+    setUseCustomModel(false);
   }
 
   function openEditDialog(printer: PrinterType) {
     setEditingPrinter(printer);
     const brand = printer.brand || '';
+    const isKnownModel = brand && brand !== 'Other' && getModelsForBrand(brand).includes(printer.model || '');
+    
     setForm({
       name: printer.name,
       brand: brand,
-      model: printer.model || '',
+      model: isKnownModel ? (printer.model || '') : '',
+      customModel: isKnownModel ? '' : (printer.model || ''),
       purchase_cost: printer.purchase_cost.toString(),
       depreciation_months: printer.depreciation_months.toString(),
+      depreciation_hours: (printer.depreciation_hours || 5000).toString(),
+      maintenance_cost: (printer.maintenance_cost || 0).toString(),
       power_watts: printer.power_watts.toString(),
       default_electricity_settings_id: printer.default_electricity_settings_id || '',
       notes: printer.notes || '',
     });
+    
     if (brand && brand !== 'Other') {
       setAvailableModels(getModelsForBrand(brand));
+      setUseCustomModel(!isKnownModel);
+    } else {
+      setUseCustomModel(true);
     }
     setDialogOpen(true);
   }
 
   function handleBrandChange(brand: string) {
-    setForm(prev => ({ ...prev, brand, model: '' }));
+    setForm(prev => ({ ...prev, brand, model: '', customModel: '' }));
     if (brand && brand !== 'Other') {
       setAvailableModels(getModelsForBrand(brand));
+      setUseCustomModel(false);
     } else {
       setAvailableModels([]);
+      setUseCustomModel(true);
     }
   }
 
   function handleModelChange(model: string) {
+    if (model === '__custom__') {
+      setUseCustomModel(true);
+      setForm(prev => ({ ...prev, model: '', customModel: '' }));
+      return;
+    }
+    
+    setUseCustomModel(false);
     const spec = getPrinterSpec(form.brand, model);
     if (spec) {
+      const depreciationMonths = hoursToMonths(spec.depreciationHours);
       setForm(prev => ({
         ...prev,
         model,
+        customModel: '',
         name: prev.name || `${spec.brand} ${spec.model}`,
         purchase_cost: spec.purchaseCost.toString(),
         power_watts: spec.powerWatts.toString(),
-        depreciation_months: spec.depreciationMonths.toString(),
+        depreciation_hours: spec.depreciationHours.toString(),
+        depreciation_months: depreciationMonths.toString(),
+        maintenance_cost: spec.maintenanceCost.toString(),
       }));
       toast({
         title: 'Specs auto-filled',
-        description: `Power: ${spec.powerWatts}W, Cost: €${spec.purchaseCost}`,
+        description: `Power: ${spec.powerWatts}W, Cost: €${spec.purchaseCost}, Maintenance: €${spec.maintenanceCost}`,
       });
     } else {
-      setForm(prev => ({ ...prev, model }));
+      setForm(prev => ({ ...prev, model, customModel: '' }));
     }
   }
 
@@ -147,13 +180,17 @@ export default function Printers() {
 
     setSaving(true);
 
+    const finalModel = useCustomModel ? form.customModel.trim() : form.model.trim();
+
     const data = {
       user_id: user.id,
       name: form.name.trim(),
       brand: form.brand.trim() || null,
-      model: form.model.trim() || null,
+      model: finalModel || null,
       purchase_cost: parseFloat(form.purchase_cost) || 0,
       depreciation_months: parseFloat(form.depreciation_months) || 24,
+      depreciation_hours: parseFloat(form.depreciation_hours) || 5000,
+      maintenance_cost: parseFloat(form.maintenance_cost) || 0,
       power_watts: parseFloat(form.power_watts) || 200,
       default_electricity_settings_id: form.default_electricity_settings_id || null,
       notes: form.notes.trim() || null,
@@ -193,6 +230,8 @@ export default function Printers() {
     }
   }
 
+  const showAutoFillNotice = form.brand && form.model && !useCustomModel && getPrinterSpec(form.brand, form.model);
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-slide-up">
@@ -230,7 +269,7 @@ export default function Printers() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="model">Model</Label>
-                    {availableModels.length > 0 ? (
+                    {availableModels.length > 0 && !useCustomModel ? (
                       <Select value={form.model} onValueChange={handleModelChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select model" />
@@ -243,27 +282,28 @@ export default function Printers() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Input
-                        id="model"
-                        value={form.model}
-                        onChange={(e) => setForm({ ...form, model: e.target.value })}
-                        placeholder="e.g. MK3S+"
-                      />
+                      <div className="space-y-2">
+                        <Input
+                          id="model"
+                          value={form.customModel}
+                          onChange={(e) => setForm({ ...form, customModel: e.target.value })}
+                          placeholder="e.g. MK3S+"
+                        />
+                        {availableModels.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs"
+                            onClick={() => setUseCustomModel(false)}
+                          >
+                            Choose from list instead
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
-
-                {form.model === '__custom__' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="custom_model">Custom Model Name</Label>
-                    <Input
-                      id="custom_model"
-                      value=""
-                      onChange={(e) => setForm({ ...form, model: e.target.value })}
-                      placeholder="Enter model name"
-                    />
-                  </div>
-                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="name">Printer Name *</Label>
@@ -276,7 +316,7 @@ export default function Printers() {
                   />
                 </div>
 
-                {form.brand && form.model && getPrinterSpec(form.brand, form.model) && (
+                {showAutoFillNotice && (
                   <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-2">
                     <Sparkles className="w-4 h-4 text-primary mt-0.5" />
                     <p className="text-sm text-primary">
@@ -298,26 +338,48 @@ export default function Printers() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="depreciation_months">Depreciation (months)</Label>
+                    <Label htmlFor="maintenance_cost">Maintenance Cost (€)</Label>
                     <Input
-                      id="depreciation_months"
+                      id="maintenance_cost"
                       type="number"
-                      value={form.depreciation_months}
-                      onChange={(e) => setForm({ ...form, depreciation_months: e.target.value })}
-                      placeholder="24"
+                      step="0.01"
+                      value={form.maintenance_cost}
+                      onChange={(e) => setForm({ ...form, maintenance_cost: e.target.value })}
+                      placeholder="0.00"
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="power_watts">Power Usage (watts)</Label>
-                  <Input
-                    id="power_watts"
-                    type="number"
-                    value={form.power_watts}
-                    onChange={(e) => setForm({ ...form, power_watts: e.target.value })}
-                    placeholder="200"
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="depreciation_hours">Depreciation (hours)</Label>
+                    <Input
+                      id="depreciation_hours"
+                      type="number"
+                      value={form.depreciation_hours}
+                      onChange={(e) => {
+                        const hours = parseFloat(e.target.value) || 5000;
+                        setForm({ 
+                          ...form, 
+                          depreciation_hours: e.target.value,
+                          depreciation_months: hoursToMonths(hours).toString()
+                        });
+                      }}
+                      placeholder="5000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="power_watts">Power Usage (watts)</Label>
+                    <Input
+                      id="power_watts"
+                      type="number"
+                      value={form.power_watts}
+                      onChange={(e) => setForm({ ...form, power_watts: e.target.value })}
+                      placeholder="200"
+                    />
+                  </div>
                 </div>
+
                 {electricitySettings.length > 0 && (
                   <div className="space-y-2">
                     <Label htmlFor="electricity">Default Electricity Profile</Label>
@@ -405,12 +467,20 @@ export default function Printers() {
                     <span className="font-medium">€{printer.purchase_cost.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-muted-foreground">Maintenance</span>
+                    <span className="font-medium">€{(printer.maintenance_cost || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Depreciation</span>
-                    <span className="font-medium">{printer.depreciation_months} months</span>
+                    <span className="font-medium">{printer.depreciation_hours || 5000}h</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Power</span>
                     <span className="font-medium">{printer.power_watts}W</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
+                    <span>Cost/hour</span>
+                    <span>€{((printer.purchase_cost + (printer.maintenance_cost || 0)) / (printer.depreciation_hours || 5000)).toFixed(4)}</span>
                   </div>
                 </CardContent>
               </Card>
