@@ -179,6 +179,92 @@ export type Database = {
         }
         Relationships: []
       }
+      print_templates: {
+        Row: {
+          additional_work_minutes: number | null
+          clean_supports_minutes: number | null
+          created_at: string
+          electricity_settings_id: string | null
+          filament_id: string | null
+          id: string
+          name: string
+          preparation_time_minutes: number | null
+          print_start_time_minutes: number | null
+          printer_id: string | null
+          profit_margin_percent: number | null
+          remove_from_plate_minutes: number | null
+          shipping_option_id: string | null
+          slicing_time_minutes: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          additional_work_minutes?: number | null
+          clean_supports_minutes?: number | null
+          created_at?: string
+          electricity_settings_id?: string | null
+          filament_id?: string | null
+          id?: string
+          name: string
+          preparation_time_minutes?: number | null
+          print_start_time_minutes?: number | null
+          printer_id?: string | null
+          profit_margin_percent?: number | null
+          remove_from_plate_minutes?: number | null
+          shipping_option_id?: string | null
+          slicing_time_minutes?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          additional_work_minutes?: number | null
+          clean_supports_minutes?: number | null
+          created_at?: string
+          electricity_settings_id?: string | null
+          filament_id?: string | null
+          id?: string
+          name?: string
+          preparation_time_minutes?: number | null
+          print_start_time_minutes?: number | null
+          printer_id?: string | null
+          profit_margin_percent?: number | null
+          remove_from_plate_minutes?: number | null
+          shipping_option_id?: string | null
+          slicing_time_minutes?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_templates_electricity_settings_id_fkey"
+            columns: ["electricity_settings_id"]
+            isOneToOne: false
+            referencedRelation: "electricity_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_templates_filament_id_fkey"
+            columns: ["filament_id"]
+            isOneToOne: false
+            referencedRelation: "filaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_templates_printer_id_fkey"
+            columns: ["printer_id"]
+            isOneToOne: false
+            referencedRelation: "printers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_templates_shipping_option_id_fkey"
+            columns: ["shipping_option_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       printers: {
         Row: {
           brand: string | null
