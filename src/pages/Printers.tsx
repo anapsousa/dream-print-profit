@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Printer, Edit, Trash2, Loader2, Zap } from 'lucide-react';
+import { Plus, Printer, Edit, Trash2, Loader2, Sparkles } from 'lucide-react';
+import { PRINTER_BRANDS, getModelsForBrand, getPrinterSpec } from '@/lib/printerData';
 
 interface PrinterType {
   id: string;
@@ -50,9 +51,19 @@ export default function Printers() {
     notes: '',
   });
 
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  useEffect(() => {
+    if (form.brand && form.brand !== 'Other') {
+      setAvailableModels(getModelsForBrand(form.brand));
+    } else {
+      setAvailableModels([]);
+    }
+  }, [form.brand]);
 
   async function fetchData() {
     if (!user) return;
@@ -79,13 +90,15 @@ export default function Printers() {
       notes: '',
     });
     setEditingPrinter(null);
+    setAvailableModels([]);
   }
 
   function openEditDialog(printer: PrinterType) {
     setEditingPrinter(printer);
+    const brand = printer.brand || '';
     setForm({
       name: printer.name,
-      brand: printer.brand || '',
+      brand: brand,
       model: printer.model || '',
       purchase_cost: printer.purchase_cost.toString(),
       depreciation_months: printer.depreciation_months.toString(),
@@ -93,7 +106,39 @@ export default function Printers() {
       default_electricity_settings_id: printer.default_electricity_settings_id || '',
       notes: printer.notes || '',
     });
+    if (brand && brand !== 'Other') {
+      setAvailableModels(getModelsForBrand(brand));
+    }
     setDialogOpen(true);
+  }
+
+  function handleBrandChange(brand: string) {
+    setForm(prev => ({ ...prev, brand, model: '' }));
+    if (brand && brand !== 'Other') {
+      setAvailableModels(getModelsForBrand(brand));
+    } else {
+      setAvailableModels([]);
+    }
+  }
+
+  function handleModelChange(model: string) {
+    const spec = getPrinterSpec(form.brand, model);
+    if (spec) {
+      setForm(prev => ({
+        ...prev,
+        model,
+        name: prev.name || `${spec.brand} ${spec.model}`,
+        purchase_cost: spec.purchaseCost.toString(),
+        power_watts: spec.powerWatts.toString(),
+        depreciation_months: spec.depreciationMonths.toString(),
+      }));
+      toast({
+        title: 'Specs auto-filled',
+        description: `Power: ${spec.powerWatts}W, Cost: €${spec.purchaseCost}`,
+      });
+    } else {
+      setForm(prev => ({ ...prev, model }));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -163,42 +208,83 @@ export default function Printers() {
                 Add Printer
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingPrinter ? 'Edit Printer' : 'Add Printer'}</DialogTitle>
-                <DialogDescription>Enter your printer details for cost calculations</DialogDescription>
+                <DialogDescription>Select a known printer to auto-fill specs, or enter manually</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="brand">Brand</Label>
+                    <Select value={form.brand} onValueChange={handleBrandChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select brand" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRINTER_BRANDS.map((brand) => (
+                          <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="model">Model</Label>
+                    {availableModels.length > 0 ? (
+                      <Select value={form.model} onValueChange={handleModelChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select model" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableModels.map((model) => (
+                            <SelectItem key={model} value={model}>{model}</SelectItem>
+                          ))}
+                          <SelectItem value="__custom__">Other (custom)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="model"
+                        value={form.model}
+                        onChange={(e) => setForm({ ...form, model: e.target.value })}
+                        placeholder="e.g. MK3S+"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {form.model === '__custom__' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="custom_model">Custom Model Name</Label>
+                    <Input
+                      id="custom_model"
+                      value=""
+                      onChange={(e) => setForm({ ...form, model: e.target.value })}
+                      placeholder="Enter model name"
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="name">Printer Name *</Label>
                   <Input
                     id="name"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g. Prusa MK3S+"
+                    placeholder="e.g. My Workshop Printer"
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="brand">Brand</Label>
-                    <Input
-                      id="brand"
-                      value={form.brand}
-                      onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                      placeholder="e.g. Prusa"
-                    />
+
+                {form.brand && form.model && getPrinterSpec(form.brand, form.model) && (
+                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-primary mt-0.5" />
+                    <p className="text-sm text-primary">
+                      Specs auto-filled from known printer database
+                    </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="model">Model</Label>
-                    <Input
-                      id="model"
-                      value={form.model}
-                      onChange={(e) => setForm({ ...form, model: e.target.value })}
-                      placeholder="e.g. MK3S+"
-                    />
-                  </div>
-                </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="purchase_cost">Purchase Cost (€)</Label>
