@@ -72,7 +72,7 @@ export function PrintListItem({
         </span>
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
-          {printTimeHours}h
+          {Math.floor(printTimeHours)}h {Math.round((printTimeHours % 1) * 60)}m
         </span>
       </div>
       

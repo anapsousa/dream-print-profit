@@ -13,11 +13,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SUBSCRIPTION_TIERS } from '@/lib/constants';
-import { Plus, FileText, Loader2, Clock, Package, Truck, Wrench, Scissors } from 'lucide-react';
+import { Plus, FileText, Loader2, Clock, Package, Truck, Wrench, Scissors, Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PrintListItem } from '@/components/prints/PrintListItem';
 import { PrintDetailPanel } from '@/components/prints/PrintDetailPanel';
 import { exportPrintToCSV, exportPrintToPDF } from '@/lib/exportUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PrintType {
   id: string;
@@ -94,6 +95,7 @@ const DISCOUNT_PERCENTAGES = [0, 5, 10, 20, 30, 50];
 
 export default function Prints() {
   const { user, subscription } = useAuth();
+  const isMobile = useIsMobile();
   const [prints, setPrints] = useState<PrintType[]>([]);
   const [printers, setPrinters] = useState<PrinterType[]>([]);
   const [filaments, setFilaments] = useState<FilamentType[]>([]);
@@ -107,7 +109,13 @@ export default function Prints() {
   const [editingPrint, setEditingPrint] = useState<PrintType | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedPrintId, setSelectedPrintId] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<'list' | 'details'>('list');
   const { toast } = useToast();
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterPrinter, setFilterPrinter] = useState<string>('all');
+  const [filterFilament, setFilterFilament] = useState<string>('all');
 
   const [form, setForm] = useState({
     name: '',
@@ -116,6 +124,7 @@ export default function Prints() {
     electricity_settings_id: '',
     filament_used_grams: '',
     print_time_hours: '',
+    print_time_minutes: '',
     extra_manual_costs: '',
     profit_margin_percent: '100',
     discount_percent: '0',
@@ -166,7 +175,7 @@ export default function Prints() {
   function resetForm() {
     setForm({
       name: '', printer_id: '', filament_id: '', electricity_settings_id: '',
-      filament_used_grams: '', print_time_hours: '', extra_manual_costs: '',
+      filament_used_grams: '', print_time_hours: '', print_time_minutes: '', extra_manual_costs: '',
       profit_margin_percent: '100', discount_percent: '0',
       preparation_time_minutes: '0', slicing_time_minutes: '0', print_start_time_minutes: '0',
       remove_from_plate_minutes: '0', clean_supports_minutes: '0', additional_work_minutes: '0',
@@ -178,13 +187,16 @@ export default function Prints() {
 
   function openEditDialog(print: PrintType) {
     setEditingPrint(print);
+    const hours = Math.floor(print.print_time_hours);
+    const minutes = Math.round((print.print_time_hours - hours) * 60);
     setForm({
       name: print.name,
       printer_id: print.printer_id,
       filament_id: print.filament_id,
       electricity_settings_id: print.electricity_settings_id || '',
       filament_used_grams: print.filament_used_grams.toString(),
-      print_time_hours: print.print_time_hours.toString(),
+      print_time_hours: hours.toString(),
+      print_time_minutes: minutes.toString(),
       extra_manual_costs: print.extra_manual_costs?.toString() || '',
       profit_margin_percent: print.profit_margin_percent?.toString() || '100',
       discount_percent: print.discount_percent?.toString() || '0',
@@ -200,6 +212,16 @@ export default function Prints() {
     setDialogOpen(true);
   }
 
+  // Filtered prints
+  const filteredPrints = useMemo(() => {
+    return prints.filter(print => {
+      const matchesSearch = print.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPrinter = filterPrinter === 'all' || print.printer_id === filterPrinter;
+      const matchesFilament = filterFilament === 'all' || print.filament_id === filterFilament;
+      return matchesSearch && matchesPrinter && matchesFilament;
+    });
+  }, [prints, searchQuery, filterPrinter, filterFilament]);
+
   const totalConsumablesCost = useMemo(() => {
     if (form.consumables_cost) return parseFloat(form.consumables_cost) || 0;
     return consumables.filter(c => c.is_active && selectedConsumables.includes(c.id)).reduce((sum, c) => sum + c.cost, 0);
@@ -213,7 +235,7 @@ export default function Prints() {
     const shipping = shippingOptions.find(s => s.id === form.shipping_option_id);
     
     const filamentGrams = parseFloat(form.filament_used_grams) || 0;
-    const printHours = parseFloat(form.print_time_hours) || 0;
+    const printHours = (parseFloat(form.print_time_hours) || 0) + (parseFloat(form.print_time_minutes) || 0) / 60;
     const extraCosts = parseFloat(form.extra_manual_costs) || 0;
     const profitMargin = parseFloat(form.profit_margin_percent) || 0;
 
@@ -265,6 +287,7 @@ export default function Prints() {
     }
     setSaving(true);
 
+    const totalPrintHours = (parseFloat(form.print_time_hours) || 0) + (parseFloat(form.print_time_minutes) || 0) / 60;
     const data = {
       user_id: user.id,
       name: form.name.trim(),
@@ -272,7 +295,7 @@ export default function Prints() {
       filament_id: form.filament_id,
       electricity_settings_id: form.electricity_settings_id || null,
       filament_used_grams: parseFloat(form.filament_used_grams) || 0,
-      print_time_hours: parseFloat(form.print_time_hours) || 0,
+      print_time_hours: totalPrintHours,
       extra_manual_costs: parseFloat(form.extra_manual_costs) || null,
       profit_margin_percent: parseFloat(form.profit_margin_percent) || 100,
       discount_percent: parseFloat(form.discount_percent) || 0,
@@ -368,6 +391,12 @@ export default function Prints() {
   const selectedPrint = prints.find(p => p.id === selectedPrintId);
   const selectedPrintCalc = selectedPrint ? getPrintCalculations(selectedPrint) : null;
 
+  // Auto-switch to details tab on mobile when print is selected
+  const handleSelectPrint = (id: string) => {
+    setSelectedPrintId(id);
+    if (isMobile) setMobileTab('details');
+  };
+
   const handleExportCSV = () => {
     if (!selectedPrint || !selectedPrintCalc) return;
     exportPrintToCSV({
@@ -462,8 +491,17 @@ export default function Prints() {
                           <Input type="number" step="0.1" value={form.filament_used_grams} onChange={(e) => setForm({ ...form, filament_used_grams: e.target.value })} placeholder="50" required />
                         </div>
                         <div className="space-y-2">
-                          <Label>Print Time (hours) *</Label>
-                          <Input type="number" step="0.1" value={form.print_time_hours} onChange={(e) => setForm({ ...form, print_time_hours: e.target.value })} placeholder="2.5" required />
+                          <Label>Print Time *</Label>
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <Input type="number" min="0" value={form.print_time_hours} onChange={(e) => setForm({ ...form, print_time_hours: e.target.value })} placeholder="0" required />
+                              <span className="text-xs text-muted-foreground">hours</span>
+                            </div>
+                            <div className="flex-1">
+                              <Input type="number" min="0" max="59" value={form.print_time_minutes} onChange={(e) => setForm({ ...form, print_time_minutes: e.target.value })} placeholder="0" />
+                              <span className="text-xs text-muted-foreground">minutes</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </TabsContent>
@@ -621,56 +659,183 @@ export default function Prints() {
           </Card>
         ) : prints.length > 0 && (
           <Card className="shadow-card border-border/50 overflow-hidden">
-            <ResizablePanelGroup direction="horizontal" className="min-h-[600px]">
-              <ResizablePanel defaultSize={40} minSize={30}>
-                <div className="p-4 border-b border-border/50">
-                  <h3 className="font-semibold">Your Prints ({prints.length})</h3>
-                </div>
-                <ScrollArea className="h-[550px]">
-                  <div className="p-4 space-y-3">
-                    {prints.map((print) => {
-                      const calc = getPrintCalculations(print);
-                      return (
-                        <PrintListItem
-                          key={print.id}
-                          id={print.id}
-                          name={print.name}
-                          printerName={calc.printer?.name || 'Unknown'}
-                          filamentName={calc.filament?.name || 'Unknown'}
-                          filamentUsedGrams={print.filament_used_grams}
-                          printTimeHours={print.print_time_hours}
-                          totalCost={calc.totalCost}
-                          recommendedPrice={calc.recommendedPrice}
-                          profit={calc.profit}
-                          isSelected={selectedPrintId === print.id}
-                          onSelect={() => setSelectedPrintId(print.id)}
-                          onEdit={() => openEditDialog(print)}
-                          onDelete={() => handleDelete(print.id)}
-                        />
-                      );
-                    })}
+            {isMobile ? (
+              /* Mobile: Tabs layout */
+              <Tabs value={mobileTab} onValueChange={(v) => setMobileTab(v as 'list' | 'details')} className="w-full">
+                <TabsList className="grid grid-cols-2 w-full rounded-none border-b">
+                  <TabsTrigger value="list">Prints ({filteredPrints.length})</TabsTrigger>
+                  <TabsTrigger value="details" disabled={!selectedPrint}>Details</TabsTrigger>
+                </TabsList>
+                <TabsContent value="list" className="m-0">
+                  {/* Search and filter bar */}
+                  <div className="p-3 border-b border-border/50 space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search prints..." 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Select value={filterPrinter} onValueChange={setFilterPrinter}>
+                        <SelectTrigger className="flex-1">
+                          <Filter className="w-3 h-3 mr-1" />
+                          <SelectValue placeholder="Printer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Printers</SelectItem>
+                          {printers.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={filterFilament} onValueChange={setFilterFilament}>
+                        <SelectTrigger className="flex-1">
+                          <Filter className="w-3 h-3 mr-1" />
+                          <SelectValue placeholder="Filament" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Filaments</SelectItem>
+                          {filaments.map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </ScrollArea>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={60} minSize={40}>
-                <PrintDetailPanel
-                  print={selectedPrint && selectedPrintCalc ? {
-                    id: selectedPrint.id,
-                    name: selectedPrint.name,
-                    printerName: selectedPrintCalc.printer?.name || 'Unknown',
-                    filamentName: selectedPrintCalc.filament?.name || 'Unknown',
-                    filamentUsedGrams: selectedPrint.filament_used_grams,
-                    printTimeHours: selectedPrint.print_time_hours,
-                    profitMarginPercent: selectedPrint.profit_margin_percent || 0,
-                    discountPercent: selectedPrint.discount_percent || 0,
-                  } : null}
-                  calculations={selectedPrintCalc}
-                  onExportCSV={handleExportCSV}
-                  onExportPDF={handleExportPDF}
-                />
-              </ResizablePanel>
-            </ResizablePanelGroup>
+                  <ScrollArea className="h-[500px]">
+                    <div className="p-3 space-y-3">
+                      {filteredPrints.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">No prints found</p>
+                      ) : filteredPrints.map((print) => {
+                        const calc = getPrintCalculations(print);
+                        return (
+                          <PrintListItem
+                            key={print.id}
+                            id={print.id}
+                            name={print.name}
+                            printerName={calc.printer?.name || 'Unknown'}
+                            filamentName={calc.filament?.name || 'Unknown'}
+                            filamentUsedGrams={print.filament_used_grams}
+                            printTimeHours={print.print_time_hours}
+                            totalCost={calc.totalCost}
+                            recommendedPrice={calc.recommendedPrice}
+                            profit={calc.profit}
+                            isSelected={selectedPrintId === print.id}
+                            onSelect={() => handleSelectPrint(print.id)}
+                            onEdit={() => openEditDialog(print)}
+                            onDelete={() => handleDelete(print.id)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+                <TabsContent value="details" className="m-0">
+                  <PrintDetailPanel
+                    print={selectedPrint && selectedPrintCalc ? {
+                      id: selectedPrint.id,
+                      name: selectedPrint.name,
+                      printerName: selectedPrintCalc.printer?.name || 'Unknown',
+                      filamentName: selectedPrintCalc.filament?.name || 'Unknown',
+                      filamentUsedGrams: selectedPrint.filament_used_grams,
+                      printTimeHours: selectedPrint.print_time_hours,
+                      profitMarginPercent: selectedPrint.profit_margin_percent || 0,
+                      discountPercent: selectedPrint.discount_percent || 0,
+                    } : null}
+                    calculations={selectedPrintCalc}
+                    onExportCSV={handleExportCSV}
+                    onExportPDF={handleExportPDF}
+                  />
+                </TabsContent>
+              </Tabs>
+            ) : (
+              /* Desktop: Resizable panels */
+              <ResizablePanelGroup direction="horizontal" className="min-h-[600px]">
+                <ResizablePanel defaultSize={40} minSize={30}>
+                  {/* Search and filter bar */}
+                  <div className="p-4 border-b border-border/50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold">Your Prints ({filteredPrints.length})</h3>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search prints..." 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Select value={filterPrinter} onValueChange={setFilterPrinter}>
+                        <SelectTrigger className="flex-1">
+                          <Filter className="w-3 h-3 mr-1" />
+                          <SelectValue placeholder="Printer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Printers</SelectItem>
+                          {printers.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={filterFilament} onValueChange={setFilterFilament}>
+                        <SelectTrigger className="flex-1">
+                          <Filter className="w-3 h-3 mr-1" />
+                          <SelectValue placeholder="Filament" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Filaments</SelectItem>
+                          {filaments.map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <ScrollArea className="h-[480px]">
+                    <div className="p-4 space-y-3">
+                      {filteredPrints.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">No prints found</p>
+                      ) : filteredPrints.map((print) => {
+                        const calc = getPrintCalculations(print);
+                        return (
+                          <PrintListItem
+                            key={print.id}
+                            id={print.id}
+                            name={print.name}
+                            printerName={calc.printer?.name || 'Unknown'}
+                            filamentName={calc.filament?.name || 'Unknown'}
+                            filamentUsedGrams={print.filament_used_grams}
+                            printTimeHours={print.print_time_hours}
+                            totalCost={calc.totalCost}
+                            recommendedPrice={calc.recommendedPrice}
+                            profit={calc.profit}
+                            isSelected={selectedPrintId === print.id}
+                            onSelect={() => handleSelectPrint(print.id)}
+                            onEdit={() => openEditDialog(print)}
+                            onDelete={() => handleDelete(print.id)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={60} minSize={40}>
+                  <PrintDetailPanel
+                    print={selectedPrint && selectedPrintCalc ? {
+                      id: selectedPrint.id,
+                      name: selectedPrint.name,
+                      printerName: selectedPrintCalc.printer?.name || 'Unknown',
+                      filamentName: selectedPrintCalc.filament?.name || 'Unknown',
+                      filamentUsedGrams: selectedPrint.filament_used_grams,
+                      printTimeHours: selectedPrint.print_time_hours,
+                      profitMarginPercent: selectedPrint.profit_margin_percent || 0,
+                      discountPercent: selectedPrint.discount_percent || 0,
+                    } : null}
+                    calculations={selectedPrintCalc}
+                    onExportCSV={handleExportCSV}
+                    onExportPDF={handleExportPDF}
+                  />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            )}
           </Card>
         )}
       </div>
