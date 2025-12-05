@@ -17,9 +17,22 @@ import { Plus, FileText, Loader2, Clock, Package, Truck, Wrench, Scissors, Searc
 import { Link } from 'react-router-dom';
 import { PrintListItem } from '@/components/prints/PrintListItem';
 import { PrintDetailPanel } from '@/components/prints/PrintDetailPanel';
+import { MultiFilamentSelector } from '@/components/prints/MultiFilamentSelector';
 import { exportPrintToCSV, exportPrintToPDF, exportMultiplePrintsToCSV } from '@/lib/exportUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Checkbox } from '@/components/ui/checkbox';
+
+interface FilamentEntry {
+  filament_id: string;
+  grams: string;
+}
+
+interface PrintFilamentDB {
+  id: string;
+  print_id: string;
+  filament_id: string;
+  grams_used: number;
+}
 
 type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc' | 'cost-asc' | 'cost-desc' | 'profit-asc' | 'profit-desc';
 
@@ -143,9 +156,7 @@ export default function Prints() {
   const [form, setForm] = useState({
     name: '',
     printer_id: '',
-    filament_id: '',
     electricity_settings_id: '',
-    filament_used_grams: '',
     print_time_hours: '',
     print_time_minutes: '',
     extra_manual_costs: '',
@@ -161,6 +172,8 @@ export default function Prints() {
     consumables_cost: '',
   });
 
+  const [filamentEntries, setFilamentEntries] = useState<FilamentEntry[]>([{ filament_id: '', grams: '' }]);
+  const [printFilaments, setPrintFilaments] = useState<Record<string, PrintFilamentDB[]>>({});
   const [selectedConsumables, setSelectedConsumables] = useState<string[]>([]);
 
   const tierInfo = SUBSCRIPTION_TIERS[subscription.tier];
@@ -199,13 +212,14 @@ export default function Prints() {
 
   function resetForm() {
     setForm({
-      name: '', printer_id: '', filament_id: '', electricity_settings_id: '',
-      filament_used_grams: '', print_time_hours: '', print_time_minutes: '', extra_manual_costs: '',
+      name: '', printer_id: '', electricity_settings_id: '',
+      print_time_hours: '', print_time_minutes: '', extra_manual_costs: '',
       profit_margin_percent: '100', discount_percent: '0',
       preparation_time_minutes: '0', slicing_time_minutes: '0', print_start_time_minutes: '0',
       remove_from_plate_minutes: '0', clean_supports_minutes: '0', additional_work_minutes: '0',
       shipping_option_id: '', consumables_cost: '',
     });
+    setFilamentEntries([{ filament_id: '', grams: '' }]);
     setSelectedConsumables([]);
     setEditingPrint(null);
   }
@@ -217,9 +231,7 @@ export default function Prints() {
     setForm({
       name: print.name,
       printer_id: print.printer_id,
-      filament_id: print.filament_id,
       electricity_settings_id: print.electricity_settings_id || '',
-      filament_used_grams: print.filament_used_grams.toString(),
       print_time_hours: hours.toString(),
       print_time_minutes: minutes.toString(),
       extra_manual_costs: print.extra_manual_costs?.toString() || '',
@@ -234,6 +246,11 @@ export default function Prints() {
       shipping_option_id: print.shipping_option_id || '',
       consumables_cost: print.consumables_cost?.toString() || '',
     });
+    // Load filaments for this print - use legacy single filament for backward compatibility
+    setFilamentEntries([{ 
+      filament_id: print.filament_id, 
+      grams: print.filament_used_grams.toString() 
+    }]);
     setDialogOpen(true);
   }
 
@@ -272,14 +289,25 @@ export default function Prints() {
     return consumables.filter(c => c.is_active && selectedConsumables.includes(c.id)).reduce((sum, c) => sum + c.cost, 0);
   }, [form.consumables_cost, selectedConsumables, consumables]);
 
+  // Calculate total filament cost from entries
+  const totalFilamentCost = useMemo(() => {
+    return filamentEntries.reduce((sum, entry) => {
+      const filament = filaments.find(f => f.id === entry.filament_id);
+      const grams = parseFloat(entry.grams) || 0;
+      return sum + (filament ? grams * filament.cost_per_gram : 0);
+    }, 0);
+  }, [filamentEntries, filaments]);
+
+  const totalFilamentGrams = useMemo(() => {
+    return filamentEntries.reduce((sum, entry) => sum + (parseFloat(entry.grams) || 0), 0);
+  }, [filamentEntries]);
+
   const calculations = useMemo(() => {
     const printer = printers.find(p => p.id === form.printer_id);
-    const filament = filaments.find(f => f.id === form.filament_id);
     const electricityId = form.electricity_settings_id || printer?.default_electricity_settings_id;
     const electricity = electricitySettings.find(e => e.id === electricityId);
     const shipping = shippingOptions.find(s => s.id === form.shipping_option_id);
     
-    const filamentGrams = parseFloat(form.filament_used_grams) || 0;
     const printHours = (parseFloat(form.print_time_hours) || 0) + (parseFloat(form.print_time_minutes) || 0) / 60;
     const extraCosts = parseFloat(form.extra_manual_costs) || 0;
     const profitMargin = parseFloat(form.profit_margin_percent) || 0;
@@ -287,7 +315,7 @@ export default function Prints() {
     const prepTime = (parseFloat(form.preparation_time_minutes) || 0) + (parseFloat(form.slicing_time_minutes) || 0) + (parseFloat(form.print_start_time_minutes) || 0);
     const postTime = (parseFloat(form.remove_from_plate_minutes) || 0) + (parseFloat(form.clean_supports_minutes) || 0) + (parseFloat(form.additional_work_minutes) || 0);
 
-    const filamentCost = filament ? filamentGrams * filament.cost_per_gram : 0;
+    const filamentCost = totalFilamentCost;
     const energyCost = printer && electricity ? (printer.power_watts * printHours / 1000) * electricity.price_per_kwh : 0;
     const depHours = printer?.depreciation_hours || 5000;
     const depreciationPerHour = printer ? (printer.purchase_cost + (printer.maintenance_cost || 0)) / depHours : 0;
@@ -321,7 +349,7 @@ export default function Prints() {
       preparationCost, postProcessingCost, shippingCost, consumablesCost,
       totalCost, priceBeforeDiscount, recommendedPrice, profit, profitAmount, discountTable,
     };
-  }, [form, printers, filaments, electricitySettings, fixedExpenses, shippingOptions, laborSettings, totalConsumablesCost]);
+  }, [form, printers, electricitySettings, fixedExpenses, shippingOptions, laborSettings, totalConsumablesCost, totalFilamentCost]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -333,13 +361,15 @@ export default function Prints() {
     setSaving(true);
 
     const totalPrintHours = (parseFloat(form.print_time_hours) || 0) + (parseFloat(form.print_time_minutes) || 0) / 60;
+    // Get primary filament for backward compatibility
+    const primaryFilament = filamentEntries[0];
     const data = {
       user_id: user.id,
       name: form.name.trim(),
       printer_id: form.printer_id,
-      filament_id: form.filament_id,
+      filament_id: primaryFilament?.filament_id || '',
       electricity_settings_id: form.electricity_settings_id || null,
-      filament_used_grams: parseFloat(form.filament_used_grams) || 0,
+      filament_used_grams: totalFilamentGrams,
       print_time_hours: totalPrintHours,
       extra_manual_costs: parseFloat(form.extra_manual_costs) || null,
       profit_margin_percent: parseFloat(form.profit_margin_percent) || 100,
@@ -422,11 +452,12 @@ export default function Prints() {
     const templateName = prompt('Enter template name:');
     if (!templateName?.trim()) return;
     
+    const primaryFilament = filamentEntries[0];
     const { error } = await supabase.from('print_templates').insert([{
       user_id: user.id,
       name: templateName.trim(),
       printer_id: form.printer_id || null,
-      filament_id: form.filament_id || null,
+      filament_id: primaryFilament?.filament_id || null,
       electricity_settings_id: form.electricity_settings_id || null,
       preparation_time_minutes: parseFloat(form.preparation_time_minutes) || 0,
       slicing_time_minutes: parseFloat(form.slicing_time_minutes) || 0,
@@ -448,7 +479,6 @@ export default function Prints() {
     setForm(prev => ({
       ...prev,
       printer_id: template.printer_id || prev.printer_id,
-      filament_id: template.filament_id || prev.filament_id,
       electricity_settings_id: template.electricity_settings_id || prev.electricity_settings_id,
       preparation_time_minutes: template.preparation_time_minutes.toString(),
       slicing_time_minutes: template.slicing_time_minutes.toString(),
@@ -459,6 +489,9 @@ export default function Prints() {
       shipping_option_id: template.shipping_option_id || '',
       profit_margin_percent: template.profit_margin_percent.toString(),
     }));
+    if (template.filament_id) {
+      setFilamentEntries([{ filament_id: template.filament_id, grams: '' }]);
+    }
     toast({ title: `Template "${template.name}" loaded` });
   }
 

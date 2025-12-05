@@ -10,6 +10,7 @@ import { SUBSCRIPTION_TIERS } from '@/lib/constants';
 import { CostTrendsChart } from '@/components/dashboard/CostTrendsChart';
 import { ProfitAnalysisChart } from '@/components/dashboard/ProfitAnalysisChart';
 import { CostBreakdownChart } from '@/components/dashboard/CostBreakdownChart';
+import { SetupWizard } from '@/components/onboarding/SetupWizard';
 import {
   Printer,
   Package,
@@ -96,6 +97,7 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [hasElectricitySettings, setHasElectricitySettings] = useState<boolean | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [prints, setPrints] = useState<PrintData[]>([]);
   const [printers, setPrinters] = useState<PrinterData[]>([]);
   const [filaments, setFilaments] = useState<FilamentData[]>([]);
@@ -105,6 +107,31 @@ export default function Dashboard() {
   const [labor, setLabor] = useState<LaborData | null>(null);
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+
+  // Check if onboarding should be shown
+  useEffect(() => {
+    const onboardingComplete = localStorage.getItem('dr3am_onboarding_complete');
+    if (!onboardingComplete && user) {
+      // Check if user has any data configured
+      const checkInitialSetup = async () => {
+        const [printersRes, filamentsRes, electricityRes] = await Promise.all([
+          supabase.from('printers').select('id').limit(1),
+          supabase.from('filaments').select('id').limit(1),
+          supabase.from('electricity_settings').select('id').limit(1),
+        ]);
+        
+        const hasNoData = 
+          (!printersRes.data || printersRes.data.length === 0) &&
+          (!filamentsRes.data || filamentsRes.data.length === 0) &&
+          (!electricityRes.data || electricityRes.data.length === 0);
+        
+        if (hasNoData) {
+          setShowOnboarding(true);
+        }
+      };
+      checkInitialSetup();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (searchParams.get('subscription') === 'success') {
@@ -256,6 +283,19 @@ export default function Dashboard() {
 
   const tierInfo = SUBSCRIPTION_TIERS[subscription.tier];
   const usagePercent = Math.min((stats.printCount / tierInfo.maxPrints) * 100, 100);
+
+  // Show onboarding wizard for new users
+  if (showOnboarding) {
+    return (
+      <SetupWizard 
+        onComplete={() => {
+          setShowOnboarding(false);
+          // Refresh data after onboarding
+          window.location.reload();
+        }} 
+      />
+    );
+  }
 
   if (hasElectricitySettings === false) {
     return (
