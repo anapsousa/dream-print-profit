@@ -152,6 +152,45 @@ export type Database = {
         }
         Relationships: []
       }
+      global_printers: {
+        Row: {
+          brand: string
+          created_at: string | null
+          depreciation_hours: number
+          id: string
+          is_active: boolean
+          maintenance_cost: number
+          model: string
+          power_watts: number
+          purchase_cost: number
+          updated_at: string | null
+        }
+        Insert: {
+          brand: string
+          created_at?: string | null
+          depreciation_hours?: number
+          id?: string
+          is_active?: boolean
+          maintenance_cost?: number
+          model: string
+          power_watts?: number
+          purchase_cost?: number
+          updated_at?: string | null
+        }
+        Update: {
+          brand?: string
+          created_at?: string | null
+          depreciation_hours?: number
+          id?: string
+          is_active?: boolean
+          maintenance_cost?: number
+          model?: string
+          power_watts?: number
+          purchase_cost?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       labor_settings: {
         Row: {
           created_at: string
@@ -497,6 +536,57 @@ export type Database = {
         }
         Relationships: []
       }
+      translations: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          en: string
+          id: string
+          key: string
+          pt: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          en: string
+          id?: string
+          key: string
+          pt: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          en?: string
+          id?: string
+          key?: string
+          pt?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           created_at: string
@@ -535,10 +625,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -665,6 +761,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

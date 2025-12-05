@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
+import { LanguageSwitcherCompact } from '@/components/LanguageSwitcher';
 import { 
   LayoutDashboard, 
   Printer, 
@@ -12,21 +15,16 @@ import {
   LogOut, 
   Menu, 
   X,
-  Crown
+  Crown,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SUBSCRIPTION_TIERS } from '@/lib/constants';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Printers', href: '/printers', icon: Printer },
-  { name: 'Filaments', href: '/filaments', icon: Package },
-  { name: 'Prints', href: '/prints', icon: FileText },
-  { name: 'Settings', href: '/settings', icon: Settings },
-];
-
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut, subscription } = useAuth();
+  const { t } = useLanguage();
+  const { isAdmin } = useAdmin();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,6 +35,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const tierInfo = SUBSCRIPTION_TIERS[subscription.tier];
+
+  const navigation = [
+    { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
+    { name: t('nav.printers'), href: '/printers', icon: Printer },
+    { name: t('nav.filaments'), href: '/filaments', icon: Package },
+    { name: t('nav.prints'), href: '/prints', icon: FileText },
+    { name: t('nav.settings'), href: '/settings', icon: Settings },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,6 +94,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
+                  location.pathname.startsWith('/admin')
+                    ? "bg-accent text-accent-foreground shadow-soft"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Shield className="w-5 h-5" />
+                {t('nav.admin')}
+              </Link>
+            )}
           </nav>
 
           {/* Subscription badge */}
@@ -108,19 +129,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* User section */}
           <div className="border-t border-border pt-4">
-            <div className="flex items-center gap-3 mb-3 px-2">
-              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-semibold text-primary">
-                  {user?.email?.charAt(0).toUpperCase()}
-                </span>
+            <div className="flex items-center justify-between mb-3 px-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-semibold text-primary">
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{user?.email}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.email}</p>
-              </div>
+              <LanguageSwitcherCompact />
             </div>
             <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleSignOut}>
               <LogOut className="w-4 h-4" />
-              Sign Out
+              {t('nav.signOut')}
             </Button>
           </div>
         </div>
