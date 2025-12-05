@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Edit, Trash2, Package, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -13,7 +14,10 @@ interface PrintListItemProps {
   recommendedPrice: number;
   profit: number;
   isSelected: boolean;
+  isChecked?: boolean;
+  showCheckbox?: boolean;
   onSelect: () => void;
+  onCheck?: (checked: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
 }
@@ -28,7 +32,10 @@ export function PrintListItem({
   recommendedPrice,
   profit,
   isSelected,
+  isChecked = false,
+  showCheckbox = false,
   onSelect,
+  onCheck,
   onEdit,
   onDelete,
 }: PrintListItemProps) {
@@ -44,6 +51,14 @@ export function PrintListItem({
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
+          {showCheckbox && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <Checkbox
+                checked={isChecked}
+                onCheckedChange={(checked) => onCheck?.(checked as boolean)}
+              />
+            </div>
+          )}
           <div className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center",
             isSelected ? "bg-accent/20" : "bg-accent/10"
