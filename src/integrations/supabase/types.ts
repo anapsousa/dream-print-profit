@@ -179,6 +179,45 @@ export type Database = {
         }
         Relationships: []
       }
+      print_filaments: {
+        Row: {
+          created_at: string | null
+          filament_id: string
+          grams_used: number
+          id: string
+          print_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          filament_id: string
+          grams_used?: number
+          id?: string
+          print_id: string
+        }
+        Update: {
+          created_at?: string | null
+          filament_id?: string
+          grams_used?: number
+          id?: string
+          print_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_filaments_filament_id_fkey"
+            columns: ["filament_id"]
+            isOneToOne: false
+            referencedRelation: "filaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_filaments_print_id_fkey"
+            columns: ["print_id"]
+            isOneToOne: false
+            referencedRelation: "prints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       print_templates: {
         Row: {
           additional_work_minutes: number | null
