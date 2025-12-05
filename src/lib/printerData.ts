@@ -26,27 +26,27 @@ export const PRINTER_BRANDS = [
 ] as const;
 
 export const KNOWN_PRINTERS: PrinterSpec[] = [
-  // Bambu Lab (updated with user values)
-  { brand: 'Bambu Lab', model: 'X1-Carbon Combo', purchaseCost: 0, powerWatts: 250, depreciationHours: 5000, maintenanceCost: 200 },
-  { brand: 'Bambu Lab', model: 'X1-Carbon', purchaseCost: 1200, powerWatts: 250, depreciationHours: 5000, maintenanceCost: 350 },
-  { brand: 'Bambu Lab', model: 'P1S Combo', purchaseCost: 950, powerWatts: 250, depreciationHours: 5000, maintenanceCost: 400 },
-  { brand: 'Bambu Lab', model: 'P1S', purchaseCost: 700, powerWatts: 150, depreciationHours: 5000, maintenanceCost: 350 },
-  { brand: 'Bambu Lab', model: 'P1P', purchaseCost: 550, powerWatts: 180, depreciationHours: 5000, maintenanceCost: 350 },
-  { brand: 'Bambu Lab', model: 'A1 Combo', purchaseCost: 560, powerWatts: 120, depreciationHours: 3000, maintenanceCost: 250 },
-  { brand: 'Bambu Lab', model: 'A1', purchaseCost: 400, powerWatts: 120, depreciationHours: 3000, maintenanceCost: 200 },
-  { brand: 'Bambu Lab', model: 'A1 mini Combo', purchaseCost: 460, powerWatts: 80, depreciationHours: 3000, maintenanceCost: 200 },
-  { brand: 'Bambu Lab', model: 'A1 mini', purchaseCost: 300, powerWatts: 80, depreciationHours: 3000, maintenanceCost: 150 },
-  { brand: 'Bambu Lab', model: 'H2S', purchaseCost: 1400, powerWatts: 250, depreciationHours: 5000, maintenanceCost: 700 },
-  { brand: 'Bambu Lab', model: 'H2D', purchaseCost: 2100, powerWatts: 250, depreciationHours: 5000, maintenanceCost: 1000 },
-  // Prusa (updated with user values)
-  { brand: 'Prusa', model: 'MK4S', purchaseCost: 1100, powerWatts: 120, depreciationHours: 5000, maintenanceCost: 350 },
-  { brand: 'Prusa', model: 'MK4', purchaseCost: 1050, powerWatts: 120, depreciationHours: 5000, maintenanceCost: 350 },
-  { brand: 'Prusa', model: 'MK3S+', purchaseCost: 800, powerWatts: 120, depreciationHours: 5000, maintenanceCost: 300 },
-  { brand: 'Prusa', model: 'Mini+', purchaseCost: 460, powerWatts: 80, depreciationHours: 3000, maintenanceCost: 200 },
-  { brand: 'Prusa', model: 'XL', purchaseCost: 4400, powerWatts: 250, depreciationHours: 5000, maintenanceCost: 1200 },
-  { brand: 'Prusa', model: 'XL 2-Head', purchaseCost: 3100, powerWatts: 250, depreciationHours: 5000, maintenanceCost: 900 },
-  { brand: 'Prusa', model: 'XL 5-Head', purchaseCost: 4400, powerWatts: 250, depreciationHours: 5000, maintenanceCost: 1200 },
-  { brand: 'Prusa', model: 'Core One', purchaseCost: 1350, powerWatts: 250, depreciationHours: 5000, maintenanceCost: 400 },
+  // Bambu Lab (updated with exact user values)
+  { brand: 'Bambu Lab', model: 'X1-Carbon Combo', purchaseCost: 0, powerWatts: 250, depreciationHours: 8760, maintenanceCost: 200 },
+  { brand: 'Bambu Lab', model: 'X1-Carbon', purchaseCost: 1200, powerWatts: 250, depreciationHours: 35000, maintenanceCost: 350 },
+  { brand: 'Bambu Lab', model: 'P1S Combo', purchaseCost: 950, powerWatts: 250, depreciationHours: 8760, maintenanceCost: 400 },
+  { brand: 'Bambu Lab', model: 'P1S', purchaseCost: 700, powerWatts: 150, depreciationHours: 8760, maintenanceCost: 350 },
+  { brand: 'Bambu Lab', model: 'P1P', purchaseCost: 550, powerWatts: 180, depreciationHours: 8760, maintenanceCost: 350 },
+  { brand: 'Bambu Lab', model: 'A1 Combo', purchaseCost: 560, powerWatts: 120, depreciationHours: 8760, maintenanceCost: 250 },
+  { brand: 'Bambu Lab', model: 'A1', purchaseCost: 400, powerWatts: 120, depreciationHours: 4380, maintenanceCost: 200 },
+  { brand: 'Bambu Lab', model: 'A1 mini Combo', purchaseCost: 460, powerWatts: 80, depreciationHours: 4380, maintenanceCost: 200 },
+  { brand: 'Bambu Lab', model: 'A1 mini', purchaseCost: 300, powerWatts: 80, depreciationHours: 4380, maintenanceCost: 150 },
+  { brand: 'Bambu Lab', model: 'H2S', purchaseCost: 1400, powerWatts: 250, depreciationHours: 35000, maintenanceCost: 700 },
+  { brand: 'Bambu Lab', model: 'H2D', purchaseCost: 2100, powerWatts: 250, depreciationHours: 35000, maintenanceCost: 1000 },
+  // Prusa (updated with exact user values)
+  { brand: 'Prusa', model: 'MK4S', purchaseCost: 1100, powerWatts: 120, depreciationHours: 35000, maintenanceCost: 350 },
+  { brand: 'Prusa', model: 'MK4', purchaseCost: 1050, powerWatts: 120, depreciationHours: 35000, maintenanceCost: 350 },
+  { brand: 'Prusa', model: 'MK3S+', purchaseCost: 800, powerWatts: 120, depreciationHours: 35000, maintenanceCost: 300 },
+  { brand: 'Prusa', model: 'Mini+', purchaseCost: 460, powerWatts: 80, depreciationHours: 4380, maintenanceCost: 200 },
+  { brand: 'Prusa', model: 'XL', purchaseCost: 4400, powerWatts: 250, depreciationHours: 35000, maintenanceCost: 1200 },
+  { brand: 'Prusa', model: 'XL 2-Head', purchaseCost: 3100, powerWatts: 250, depreciationHours: 35000, maintenanceCost: 900 },
+  { brand: 'Prusa', model: 'XL 5-Head', purchaseCost: 4400, powerWatts: 250, depreciationHours: 35000, maintenanceCost: 1200 },
+  { brand: 'Prusa', model: 'Core One', purchaseCost: 1350, powerWatts: 250, depreciationHours: 35000, maintenanceCost: 400 },
   // Creality
   { brand: 'Creality', model: 'Ender 3 V3', purchaseCost: 200, powerWatts: 350, depreciationHours: 2000, maintenanceCost: 100 },
   { brand: 'Creality', model: 'Ender 3 V3 SE', purchaseCost: 180, powerWatts: 270, depreciationHours: 2000, maintenanceCost: 80 },
