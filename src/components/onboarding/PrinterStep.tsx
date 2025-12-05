@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PRINTER_BRANDS, getModelsForBrand, getPrinterSpec } from '@/lib/printerData';
-import { Printer, ArrowLeft, ArrowRight, Loader2, Check } from 'lucide-react';
+import { Printer, ArrowLeft, ArrowRight, Loader2, Check, PlusCircle } from 'lucide-react';
 
 interface PrinterStepProps {
   onNext: () => void;
@@ -17,9 +18,11 @@ interface PrinterStepProps {
 
 export function PrinterStep({ onNext, onBack, onPrinterAdded }: PrinterStepProps) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [added, setAdded] = useState(false);
+  const [isCustomMode, setIsCustomMode] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [form, setForm] = useState({
@@ -35,9 +38,18 @@ export function PrinterStep({ onNext, onBack, onPrinterAdded }: PrinterStepProps
   const handleBrandChange = (brand: string) => {
     setSelectedBrand(brand);
     setSelectedModel('');
+    setIsCustomMode(false);
     if (brand === 'Other') {
+      setIsCustomMode(true);
       setForm({ name: '', purchase_cost: '', power_watts: '', depreciation_hours: '5000', maintenance_cost: '0' });
     }
+  };
+
+  const handleCustomMode = () => {
+    setIsCustomMode(true);
+    setSelectedBrand('');
+    setSelectedModel('');
+    setForm({ name: '', purchase_cost: '', power_watts: '', depreciation_hours: '5000', maintenance_cost: '0' });
   };
 
   const handleModelChange = (model: string) => {
@@ -85,9 +97,9 @@ export function PrinterStep({ onNext, onBack, onPrinterAdded }: PrinterStepProps
         <div className="mx-auto w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
           <Printer className="w-8 h-8 text-primary" />
         </div>
-        <h2 className="font-display text-2xl font-bold">Add Your First Printer</h2>
+        <h2 className="font-display text-2xl font-bold">{t('onboarding.printer.title')}</h2>
         <p className="text-muted-foreground text-sm mt-1">
-          Select from popular brands or enter custom details
+          {t('onboarding.printer.subtitle')}
         </p>
       </div>
 
@@ -101,42 +113,65 @@ export function PrinterStep({ onNext, onBack, onPrinterAdded }: PrinterStepProps
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Brand</Label>
-              <Select value={selectedBrand} onValueChange={handleBrandChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select brand" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRINTER_BRANDS.map(brand => (
-                    <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {selectedBrand && selectedBrand !== 'Other' && (
-              <div className="space-y-2">
-                <Label>Model</Label>
-                <Select value={selectedModel} onValueChange={handleModelChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableModels.map(model => (
-                      <SelectItem key={model} value={model}>{model}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {!isCustomMode ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t('printers.brand')}</Label>
+                  <Select value={selectedBrand} onValueChange={handleBrandChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('printers.selectBrand')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRINTER_BRANDS.filter(b => b !== 'Other').map(brand => (
+                        <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {selectedBrand && (
+                  <div className="space-y-2">
+                    <Label>{t('printers.model')}</Label>
+                    <Select value={selectedModel} onValueChange={handleModelChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('printers.selectModel')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableModels.map(model => (
+                          <SelectItem key={model} value={model}>{model}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {(selectedModel || selectedBrand === 'Other') && (
+              {/* Custom printer button */}
+              <Button
+                variant="outline"
+                onClick={handleCustomMode}
+                className="w-full border-dashed border-2 h-12"
+              >
+                <PlusCircle className="w-4 h-4 mr-2" />
+                {t('printers.notListed')}
+              </Button>
+            </>
+          ) : (
+            <div className="p-4 rounded-lg bg-muted/50 border border-border">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium">{t('printers.custom')}</h3>
+                <Button variant="ghost" size="sm" onClick={() => setIsCustomMode(false)}>
+                  {t('common.back')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {(selectedModel || isCustomMode) && (
             <div className="space-y-4 pt-4 border-t border-border/50">
               <div className="space-y-2">
-                <Label>Printer Name</Label>
+                <Label>{t('common.name')}</Label>
                 <Input
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
@@ -145,7 +180,7 @@ export function PrinterStep({ onNext, onBack, onPrinterAdded }: PrinterStepProps
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Purchase Cost (€)</Label>
+                  <Label>{t('printers.purchaseCost')} (€)</Label>
                   <Input
                     type="number"
                     value={form.purchase_cost}
@@ -154,7 +189,7 @@ export function PrinterStep({ onNext, onBack, onPrinterAdded }: PrinterStepProps
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Power (Watts)</Label>
+                  <Label>{t('printers.powerWatts')}</Label>
                   <Input
                     type="number"
                     value={form.power_watts}
@@ -163,8 +198,28 @@ export function PrinterStep({ onNext, onBack, onPrinterAdded }: PrinterStepProps
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t('printers.depreciationHours')}</Label>
+                  <Input
+                    type="number"
+                    value={form.depreciation_hours}
+                    onChange={e => setForm({ ...form, depreciation_hours: e.target.value })}
+                    placeholder="5000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('printers.maintenanceCost')} (€)</Label>
+                  <Input
+                    type="number"
+                    value={form.maintenance_cost}
+                    onChange={e => setForm({ ...form, maintenance_cost: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
               <Button onClick={handleSave} disabled={saving || !form.name} className="w-full">
-                {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Add Printer'}
+                {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('common.loading')}</> : t('printers.addNew')}
               </Button>
             </div>
           )}
@@ -173,10 +228,10 @@ export function PrinterStep({ onNext, onBack, onPrinterAdded }: PrinterStepProps
 
       <div className="flex justify-between pt-4">
         <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="w-4 h-4 mr-2" />Back
+          <ArrowLeft className="w-4 h-4 mr-2" />{t('common.back')}
         </Button>
         <Button onClick={onNext} variant={added ? 'default' : 'outline'}>
-          {added ? 'Continue' : 'Skip for now'}
+          {added ? t('common.continue') : t('common.skip')}
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
