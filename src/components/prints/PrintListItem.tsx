@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, Edit, Trash2, Package, Clock } from 'lucide-react';
+import { FileText, Edit, Trash2, Package, Clock, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PrintListItemProps {
@@ -20,6 +20,7 @@ interface PrintListItemProps {
   onCheck?: (checked: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onDuplicate?: () => void;
 }
 
 export function PrintListItem({
@@ -38,6 +39,7 @@ export function PrintListItem({
   onCheck,
   onEdit,
   onDelete,
+  onDuplicate,
 }: PrintListItemProps) {
   return (
     <div
@@ -71,10 +73,15 @@ export function PrintListItem({
           </div>
         </div>
         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
+          {onDuplicate && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate} title="Duplicate">
+              <Copy className="w-4 h-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit} title="Edit">
             <Edit className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDelete}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDelete} title="Delete">
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>

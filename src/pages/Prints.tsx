@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SUBSCRIPTION_TIERS } from '@/lib/constants';
-import { Plus, FileText, Loader2, Clock, Package, Truck, Wrench, Scissors, Search, Filter, ArrowUpDown, Trash2, Download, CheckSquare } from 'lucide-react';
+import { Plus, FileText, Loader2, Clock, Package, Truck, Wrench, Scissors, Search, Filter, ArrowUpDown, Trash2, Download, CheckSquare, Copy, Save, FolderOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PrintListItem } from '@/components/prints/PrintListItem';
 import { PrintDetailPanel } from '@/components/prints/PrintDetailPanel';
@@ -94,6 +94,22 @@ interface LaborSettingType {
   post_processing_rate_per_hour: number;
 }
 
+interface TemplateType {
+  id: string;
+  name: string;
+  printer_id: string | null;
+  filament_id: string | null;
+  electricity_settings_id: string | null;
+  preparation_time_minutes: number;
+  slicing_time_minutes: number;
+  print_start_time_minutes: number;
+  remove_from_plate_minutes: number;
+  clean_supports_minutes: number;
+  additional_work_minutes: number;
+  shipping_option_id: string | null;
+  profit_margin_percent: number;
+}
+
 const DISCOUNT_PERCENTAGES = [0, 5, 10, 20, 30, 50];
 
 export default function Prints() {
@@ -107,6 +123,7 @@ export default function Prints() {
   const [consumables, setConsumables] = useState<ConsumableType[]>([]);
   const [shippingOptions, setShippingOptions] = useState<ShippingOptionType[]>([]);
   const [laborSettings, setLaborSettings] = useState<LaborSettingType | null>(null);
+  const [templates, setTemplates] = useState<TemplateType[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPrint, setEditingPrint] = useState<PrintType | null>(null);
@@ -156,7 +173,7 @@ export default function Prints() {
   async function fetchData() {
     if (!user) return;
 
-    const [printsRes, printersRes, filamentsRes, electricityRes, expensesRes, consumablesRes, shippingRes, laborRes] = await Promise.all([
+    const [printsRes, printersRes, filamentsRes, electricityRes, expensesRes, consumablesRes, shippingRes, laborRes, templatesRes] = await Promise.all([
       supabase.from('prints').select('*').order('created_at', { ascending: false }),
       supabase.from('printers').select('id, name, purchase_cost, depreciation_months, depreciation_hours, maintenance_cost, power_watts, default_electricity_settings_id'),
       supabase.from('filaments').select('id, name, cost_per_gram'),
@@ -165,6 +182,7 @@ export default function Prints() {
       supabase.from('consumables').select('*'),
       supabase.from('shipping_options').select('*'),
       supabase.from('labor_settings').select('*').limit(1).single(),
+      supabase.from('print_templates').select('*').order('name'),
     ]);
 
     if (printsRes.data) setPrints(printsRes.data as PrintType[]);
@@ -175,6 +193,7 @@ export default function Prints() {
     if (consumablesRes.data) setConsumables(consumablesRes.data);
     if (shippingRes.data) setShippingOptions(shippingRes.data);
     if (laborRes.data) setLaborSettings(laborRes.data);
+    if (templatesRes.data) setTemplates(templatesRes.data as TemplateType[]);
     setLoading(false);
   }
 
@@ -366,6 +385,93 @@ export default function Prints() {
     }
   }
 
+  async function handleDuplicate(print: PrintType) {
+    if (!user || !canAddPrint) {
+      toast({ variant: 'destructive', title: 'Limit reached', description: 'Upgrade your plan to save more prints.' });
+      return;
+    }
+    const { error } = await supabase.from('prints').insert([{
+      user_id: user.id,
+      name: `${print.name} (copy)`,
+      printer_id: print.printer_id,
+      filament_id: print.filament_id,
+      electricity_settings_id: print.electricity_settings_id,
+      filament_used_grams: print.filament_used_grams,
+      print_time_hours: print.print_time_hours,
+      extra_manual_costs: print.extra_manual_costs,
+      profit_margin_percent: print.profit_margin_percent,
+      discount_percent: print.discount_percent,
+      preparation_time_minutes: print.preparation_time_minutes,
+      slicing_time_minutes: print.slicing_time_minutes,
+      print_start_time_minutes: print.print_start_time_minutes,
+      remove_from_plate_minutes: print.remove_from_plate_minutes,
+      clean_supports_minutes: print.clean_supports_minutes,
+      additional_work_minutes: print.additional_work_minutes,
+      shipping_option_id: print.shipping_option_id,
+      consumables_cost: print.consumables_cost,
+    }]);
+    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
+    else {
+      toast({ title: 'Print duplicated' });
+      fetchData();
+    }
+  }
+
+  async function handleSaveTemplate() {
+    if (!user) return;
+    const templateName = prompt('Enter template name:');
+    if (!templateName?.trim()) return;
+    
+    const { error } = await supabase.from('print_templates').insert([{
+      user_id: user.id,
+      name: templateName.trim(),
+      printer_id: form.printer_id || null,
+      filament_id: form.filament_id || null,
+      electricity_settings_id: form.electricity_settings_id || null,
+      preparation_time_minutes: parseFloat(form.preparation_time_minutes) || 0,
+      slicing_time_minutes: parseFloat(form.slicing_time_minutes) || 0,
+      print_start_time_minutes: parseFloat(form.print_start_time_minutes) || 0,
+      remove_from_plate_minutes: parseFloat(form.remove_from_plate_minutes) || 0,
+      clean_supports_minutes: parseFloat(form.clean_supports_minutes) || 0,
+      additional_work_minutes: parseFloat(form.additional_work_minutes) || 0,
+      shipping_option_id: form.shipping_option_id || null,
+      profit_margin_percent: parseFloat(form.profit_margin_percent) || 100,
+    }]);
+    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
+    else {
+      toast({ title: 'Template saved' });
+      fetchData();
+    }
+  }
+
+  function handleLoadTemplate(template: TemplateType) {
+    setForm(prev => ({
+      ...prev,
+      printer_id: template.printer_id || prev.printer_id,
+      filament_id: template.filament_id || prev.filament_id,
+      electricity_settings_id: template.electricity_settings_id || prev.electricity_settings_id,
+      preparation_time_minutes: template.preparation_time_minutes.toString(),
+      slicing_time_minutes: template.slicing_time_minutes.toString(),
+      print_start_time_minutes: template.print_start_time_minutes.toString(),
+      remove_from_plate_minutes: template.remove_from_plate_minutes.toString(),
+      clean_supports_minutes: template.clean_supports_minutes.toString(),
+      additional_work_minutes: template.additional_work_minutes.toString(),
+      shipping_option_id: template.shipping_option_id || '',
+      profit_margin_percent: template.profit_margin_percent.toString(),
+    }));
+    toast({ title: `Template "${template.name}" loaded` });
+  }
+
+  async function handleDeleteTemplate(id: string) {
+    if (!confirm('Delete this template?')) return;
+    const { error } = await supabase.from('print_templates').delete().eq('id', id);
+    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
+    else {
+      toast({ title: 'Template deleted' });
+      fetchData();
+    }
+  }
+
   function getPrintCalculations(print: PrintType) {
     const printer = printers.find(p => p.id === print.printer_id);
     const filament = filaments.find(f => f.id === print.filament_id);
@@ -523,6 +629,47 @@ export default function Prints() {
                   <DialogTitle>{editingPrint ? 'Edit Print' : 'Calculate Print Cost'}</DialogTitle>
                   <DialogDescription>Enter print details to calculate costs and pricing</DialogDescription>
                 </DialogHeader>
+                
+                {/* Template actions */}
+                {!editingPrint && (
+                  <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
+                    <FolderOpen className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Templates:</span>
+                    {templates.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">No templates saved yet</span>
+                    ) : (
+                      <Select onValueChange={(id) => {
+                        const template = templates.find(t => t.id === id);
+                        if (template) handleLoadTemplate(template);
+                      }}>
+                        <SelectTrigger className="w-[180px] h-8">
+                          <SelectValue placeholder="Load template..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {templates.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <Button type="button" variant="outline" size="sm" onClick={handleSaveTemplate} className="ml-auto">
+                      <Save className="w-3 h-3 mr-1" />Save as Template
+                    </Button>
+                    {templates.length > 0 && (
+                      <Select onValueChange={(id) => handleDeleteTemplate(id)}>
+                        <SelectTrigger className="w-8 h-8 p-0">
+                          <Trash2 className="w-3 h-3" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {templates.map(t => (
+                            <SelectItem key={t.id} value={t.id}>Delete: {t.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
+                
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <Tabs defaultValue="basic" className="space-y-4">
                     <TabsList className="grid grid-cols-4 w-full">
@@ -843,6 +990,7 @@ export default function Prints() {
                             onSelect={() => handleSelectPrint(print.id)}
                             onEdit={() => openEditDialog(print)}
                             onDelete={() => handleDelete(print.id)}
+                            onDuplicate={() => handleDuplicate(print)}
                           />
                         );
                       })}
@@ -973,6 +1121,7 @@ export default function Prints() {
                             onSelect={() => handleSelectPrint(print.id)}
                             onEdit={() => openEditDialog(print)}
                             onDelete={() => handleDelete(print.id)}
+                            onDuplicate={() => handleDuplicate(print)}
                           />
                         );
                       })}
