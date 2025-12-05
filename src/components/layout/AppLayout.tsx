@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/Logo';
 import { 
   LayoutDashboard, 
   Printer, 
@@ -11,7 +12,6 @@ import {
   LogOut, 
   Menu, 
   X,
-  Zap,
   Crown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -43,12 +43,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-display font-bold text-lg">Dr3amToReal</span>
-          </Link>
+          <Logo size="sm" />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 rounded-lg hover:bg-muted transition-colors"
@@ -70,15 +65,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}>
         <div className="flex flex-col h-full p-4">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-3 mb-8 mt-2">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-soft">
-              <Zap className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-display font-bold text-lg leading-tight">Dr3amToReal</h1>
-              <p className="text-xs text-muted-foreground">Cost Calculator</p>
-            </div>
-          </Link>
+          <Logo size="md" showSubtitle className="mb-8 mt-2" />
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1">
