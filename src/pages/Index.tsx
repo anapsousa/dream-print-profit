@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Logo } from '@/components/Logo';
 import { Zap, Calculator, TrendingUp, DollarSign, Printer, Package, FileText, ArrowRight } from 'lucide-react';
 
 export default function Index() {
@@ -45,12 +46,7 @@ export default function Index() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 gradient-hero opacity-5" />
         <nav className="relative z-10 max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-soft">
-              <Zap className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className="font-display font-bold text-xl">Dr3amToReal</span>
-          </div>
+          <Logo size="md" />
           <div className="flex items-center gap-4">
             <Button variant="ghost" asChild>
               <Link to="/pricing">Pricing</Link>

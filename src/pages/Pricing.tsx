@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SUBSCRIPTION_TIERS } from '@/lib/constants';
-import { Check, Zap, Loader2, ArrowLeft } from 'lucide-react';
+import { Logo } from '@/components/Logo';
+import { Check, Loader2, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 
@@ -105,7 +106,12 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-4 py-12">
+      {/* Header with Logo */}
+      <header className="max-w-6xl mx-auto px-4 py-6">
+        <Logo size="md" />
+      </header>
+
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Back Button */}
         {user && (
           <Button variant="ghost" asChild className="mb-8">
@@ -118,9 +124,6 @@ export default function Pricing() {
 
         {/* Header */}
         <div className="text-center mb-12 animate-slide-up">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary shadow-glow mb-6">
-            <Zap className="w-8 h-8 text-primary-foreground" />
-          </div>
           <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
             Choose Your <span className="text-gradient">Plan</span>
           </h1>
