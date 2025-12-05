@@ -725,13 +725,11 @@ export default function Prints() {
                             <SelectContent>{printers.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}</SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Filament *</Label>
-                          <Select value={form.filament_id} onValueChange={(v) => setForm({ ...form, filament_id: v })} required>
-                            <SelectTrigger><SelectValue placeholder="Select filament" /></SelectTrigger>
-                            <SelectContent>{filaments.map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}</SelectContent>
-                          </Select>
-                        </div>
+                        <MultiFilamentSelector
+                          filaments={filaments.map(f => ({ id: f.id, name: f.name, cost_per_gram: f.cost_per_gram }))}
+                          entries={filamentEntries}
+                          onChange={setFilamentEntries}
+                        />
                         {electricitySettings.length > 0 && (
                           <div className="space-y-2">
                             <Label>Electricity Profile</Label>
@@ -741,10 +739,6 @@ export default function Prints() {
                             </Select>
                           </div>
                         )}
-                        <div className="space-y-2">
-                          <Label>Filament Used (g) *</Label>
-                          <Input type="number" step="0.1" value={form.filament_used_grams} onChange={(e) => setForm({ ...form, filament_used_grams: e.target.value })} placeholder="50" required />
-                        </div>
                         <div className="space-y-2">
                           <Label>Print Time *</Label>
                           <div className="flex gap-2">
