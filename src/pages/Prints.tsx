@@ -7,13 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SUBSCRIPTION_TIERS } from '@/lib/constants';
-import { Plus, FileText, Edit, Trash2, Loader2, DollarSign, TrendingUp, Clock, Package, Truck, Wrench, Scissors } from 'lucide-react';
+import { Plus, FileText, Loader2, Clock, Package, Truck, Wrench, Scissors } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PrintListItem } from '@/components/prints/PrintListItem';
+import { PrintDetailPanel } from '@/components/prints/PrintDetailPanel';
+import { exportPrintToCSV, exportPrintToPDF } from '@/lib/exportUtils';
 
 interface PrintType {
   id: string;
@@ -102,6 +106,7 @@ export default function Prints() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPrint, setEditingPrint] = useState<PrintType | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedPrintId, setSelectedPrintId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [form, setForm] = useState({
@@ -114,15 +119,12 @@ export default function Prints() {
     extra_manual_costs: '',
     profit_margin_percent: '100',
     discount_percent: '0',
-    // Labor - Preparation
     preparation_time_minutes: '0',
     slicing_time_minutes: '0',
     print_start_time_minutes: '0',
-    // Post-processing
     remove_from_plate_minutes: '0',
     clean_supports_minutes: '0',
     additional_work_minutes: '0',
-    // Shipping & Consumables
     shipping_option_id: '',
     consumables_cost: '',
   });
@@ -198,13 +200,11 @@ export default function Prints() {
     setDialogOpen(true);
   }
 
-  // Calculate total consumables from selected
   const totalConsumablesCost = useMemo(() => {
     if (form.consumables_cost) return parseFloat(form.consumables_cost) || 0;
     return consumables.filter(c => c.is_active && selectedConsumables.includes(c.id)).reduce((sum, c) => sum + c.cost, 0);
   }, [form.consumables_cost, selectedConsumables, consumables]);
 
-  // Calculate costs
   const calculations = useMemo(() => {
     const printer = printers.find(p => p.id === form.printer_id);
     const filament = filaments.find(f => f.id === form.filament_id);
@@ -217,42 +217,27 @@ export default function Prints() {
     const extraCosts = parseFloat(form.extra_manual_costs) || 0;
     const profitMargin = parseFloat(form.profit_margin_percent) || 0;
 
-    // Labor times in minutes
     const prepTime = (parseFloat(form.preparation_time_minutes) || 0) + (parseFloat(form.slicing_time_minutes) || 0) + (parseFloat(form.print_start_time_minutes) || 0);
     const postTime = (parseFloat(form.remove_from_plate_minutes) || 0) + (parseFloat(form.clean_supports_minutes) || 0) + (parseFloat(form.additional_work_minutes) || 0);
 
-    // Filament cost
     const filamentCost = filament ? filamentGrams * filament.cost_per_gram : 0;
-
-    // Energy cost
     const energyCost = printer && electricity ? (printer.power_watts * printHours / 1000) * electricity.price_per_kwh : 0;
-
-    // Printer depreciation per hour using depreciation_hours
     const depHours = printer?.depreciation_hours || 5000;
     const depreciationPerHour = printer ? (printer.purchase_cost + (printer.maintenance_cost || 0)) / depHours : 0;
     const depreciationCost = depreciationPerHour * printHours;
-
-    // Fixed expenses allocation
     const totalMonthlyFixed = fixedExpenses.filter(e => e.is_active).reduce((sum, e) => sum + e.monthly_amount, 0);
     const fixedCostShare = (totalMonthlyFixed / 720) * printHours;
-
-    // Labor costs
     const prepRate = laborSettings?.preparation_rate_per_hour || 15;
     const postRate = laborSettings?.post_processing_rate_per_hour || 12;
     const preparationCost = (prepTime / 60) * prepRate;
     const postProcessingCost = (postTime / 60) * postRate;
-
-    // Shipping
     const shippingCost = shipping?.price || 0;
-
-    // Consumables
     const consumablesCost = totalConsumablesCost;
 
     const totalCost = filamentCost + energyCost + depreciationCost + fixedCostShare + extraCosts + preparationCost + postProcessingCost + shippingCost + consumablesCost;
     const profitAmount = totalCost * (profitMargin / 100);
     const priceBeforeDiscount = totalCost + profitAmount;
 
-    // Calculate discount table
     const discountTable = DISCOUNT_PERCENTAGES.map(discountPct => {
       const discountedPrice = priceBeforeDiscount * (1 - discountPct / 100);
       const discountAmount = priceBeforeDiscount * (discountPct / 100);
@@ -325,7 +310,11 @@ export default function Prints() {
     if (!confirm('Delete this print?')) return;
     const { error } = await supabase.from('prints').delete().eq('id', id);
     if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
-    else { toast({ title: 'Deleted' }); fetchData(); }
+    else {
+      toast({ title: 'Deleted' });
+      if (selectedPrintId === id) setSelectedPrintId(null);
+      fetchData();
+    }
   }
 
   function getPrintCalculations(print: PrintType) {
@@ -359,9 +348,54 @@ export default function Prints() {
     const priceBeforeDiscount = totalCost * (1 + profitMargin / 100);
     const recommendedPrice = priceBeforeDiscount * (1 - discount / 100);
     const profit = recommendedPrice - totalCost;
+    const profitAmount = totalCost * (profitMargin / 100);
 
-    return { totalCost, recommendedPrice, profit, printer, filament };
+    const discountTable = DISCOUNT_PERCENTAGES.map(discountPct => {
+      const discountedPrice = priceBeforeDiscount * (1 - discountPct / 100);
+      const discountAmount = priceBeforeDiscount * (discountPct / 100);
+      const potentialProfit = discountedPrice - totalCost;
+      return { discountPct, discountedPrice, discountAmount, potentialProfit, finalPrice: discountedPrice };
+    });
+
+    return { 
+      filamentCost, energyCost, depreciationCost, fixedCostShare, extraCosts,
+      preparationCost, postProcessingCost, shippingCost, consumablesCost,
+      totalCost, priceBeforeDiscount, recommendedPrice, profit, profitAmount, discountTable,
+      printer, filament 
+    };
   }
+
+  const selectedPrint = prints.find(p => p.id === selectedPrintId);
+  const selectedPrintCalc = selectedPrint ? getPrintCalculations(selectedPrint) : null;
+
+  const handleExportCSV = () => {
+    if (!selectedPrint || !selectedPrintCalc) return;
+    exportPrintToCSV({
+      name: selectedPrint.name,
+      printerName: selectedPrintCalc.printer?.name || 'Unknown',
+      filamentName: selectedPrintCalc.filament?.name || 'Unknown',
+      filamentUsedGrams: selectedPrint.filament_used_grams,
+      printTimeHours: selectedPrint.print_time_hours,
+      calculations: selectedPrintCalc,
+      profitMarginPercent: selectedPrint.profit_margin_percent || 0,
+      discountPercent: selectedPrint.discount_percent || 0,
+    });
+    toast({ title: 'CSV exported' });
+  };
+
+  const handleExportPDF = () => {
+    if (!selectedPrint || !selectedPrintCalc) return;
+    exportPrintToPDF({
+      name: selectedPrint.name,
+      printerName: selectedPrintCalc.printer?.name || 'Unknown',
+      filamentName: selectedPrintCalc.filament?.name || 'Unknown',
+      filamentUsedGrams: selectedPrint.filament_used_grams,
+      printTimeHours: selectedPrint.print_time_hours,
+      calculations: selectedPrintCalc,
+      profitMarginPercent: selectedPrint.profit_margin_percent || 0,
+      discountPercent: selectedPrint.discount_percent || 0,
+    });
+  };
 
   const canCreatePrint = printers.length > 0 && filaments.length > 0;
 
@@ -394,7 +428,6 @@ export default function Prints() {
                       <TabsTrigger value="pricing">Pricing</TabsTrigger>
                     </TabsList>
 
-                    {/* Basic Info Tab */}
                     <TabsContent value="basic" className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -435,7 +468,6 @@ export default function Prints() {
                       </div>
                     </TabsContent>
 
-                    {/* Labor Tab */}
                     <TabsContent value="labor" className="space-y-4">
                       <div className="p-4 rounded-xl bg-muted/50">
                         <h4 className="font-semibold flex items-center gap-2 mb-4"><Wrench className="w-4 h-4" />Preparation (before printing)</h4>
@@ -475,7 +507,6 @@ export default function Prints() {
                       </div>
                     </TabsContent>
 
-                    {/* Extras Tab */}
                     <TabsContent value="extras" className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-4">
@@ -525,79 +556,21 @@ export default function Prints() {
                       </div>
                     </TabsContent>
 
-                    {/* Pricing Tab */}
                     <TabsContent value="pricing" className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Profit Margin (%)</Label>
-                              <Input type="number" value={form.profit_margin_percent} onChange={(e) => setForm({ ...form, profit_margin_percent: e.target.value })} placeholder="100" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Discount (%)</Label>
-                              <Input type="number" value={form.discount_percent} onChange={(e) => setForm({ ...form, discount_percent: e.target.value })} placeholder="0" />
-                            </div>
-                          </div>
-
-                          {/* Cost Breakdown */}
-                          <div className="p-4 rounded-xl bg-muted/50 space-y-3">
-                            <h4 className="font-semibold">Cost Breakdown</h4>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between"><span className="text-muted-foreground">Filament</span><span>€{calculations.filamentCost.toFixed(2)}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Depreciation</span><span>€{calculations.depreciationCost.toFixed(2)}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Electricity</span><span>€{calculations.energyCost.toFixed(2)}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Consumables</span><span>€{calculations.consumablesCost.toFixed(2)}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Preparation</span><span>€{calculations.preparationCost.toFixed(2)}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Post-Processing</span><span>€{calculations.postProcessingCost.toFixed(2)}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span>€{calculations.shippingCost.toFixed(2)}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Subscriptions/Fixed</span><span>€{calculations.fixedCostShare.toFixed(2)}</span></div>
-                              {calculations.extraCosts > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Extra Costs</span><span>€{calculations.extraCosts.toFixed(2)}</span></div>}
-                              <div className="border-t pt-2 flex justify-between font-semibold"><span>Total Production Cost</span><span>€{calculations.totalCost.toFixed(2)}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Profit ({form.profit_margin_percent}%)</span><span>€{calculations.profitAmount.toFixed(2)}</span></div>
-                            </div>
-                          </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Profit Margin (%)</Label>
+                          <Input type="number" value={form.profit_margin_percent} onChange={(e) => setForm({ ...form, profit_margin_percent: e.target.value })} placeholder="100" />
                         </div>
-
-                        {/* Recommended Price & Discount Table */}
-                        <div className="space-y-4">
-                          <div className="p-6 rounded-xl gradient-accent text-accent-foreground space-y-3">
-                            <h3 className="font-semibold flex items-center gap-2"><DollarSign className="w-5 h-5" />Recommended Sale Price</h3>
-                            <p className="text-4xl font-bold">€{calculations.recommendedPrice.toFixed(2)}</p>
-                            <div className="flex items-center gap-2 text-sm"><TrendingUp className="w-4 h-4" /><span>Profit: €{calculations.profit.toFixed(2)}</span></div>
-                          </div>
-
-                          {/* Discount Table */}
-                          <div className="p-4 rounded-xl bg-muted/50">
-                            <h4 className="font-semibold mb-3">Discount Table (without VAT)</h4>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="text-xs">Discount</TableHead>
-                                  {DISCOUNT_PERCENTAGES.map(d => <TableHead key={d} className="text-xs text-center">{d}%</TableHead>)}
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                <TableRow>
-                                  <TableCell className="text-xs font-medium">Price</TableCell>
-                                  {calculations.discountTable.map((d, i) => <TableCell key={i} className="text-xs text-center">€{d.discountedPrice.toFixed(2)}</TableCell>)}
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell className="text-xs font-medium">Cost</TableCell>
-                                  {calculations.discountTable.map((_, i) => <TableCell key={i} className="text-xs text-center text-muted-foreground">€{calculations.totalCost.toFixed(2)}</TableCell>)}
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell className="text-xs font-medium">Discount</TableCell>
-                                  {calculations.discountTable.map((d, i) => <TableCell key={i} className="text-xs text-center text-muted-foreground">€{d.discountAmount.toFixed(2)}</TableCell>)}
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell className="text-xs font-medium">Profit</TableCell>
-                                  {calculations.discountTable.map((d, i) => <TableCell key={i} className={`text-xs text-center font-medium ${d.potentialProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>€{d.potentialProfit.toFixed(2)}</TableCell>)}
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </div>
+                        <div className="space-y-2">
+                          <Label>Discount (%)</Label>
+                          <Input type="number" value={form.discount_percent} onChange={(e) => setForm({ ...form, discount_percent: e.target.value })} placeholder="0" />
                         </div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-muted/50 text-center">
+                        <p className="text-sm text-muted-foreground">Recommended Price</p>
+                        <p className="text-3xl font-bold text-accent">€{calculations.recommendedPrice.toFixed(2)}</p>
+                        <p className="text-sm text-muted-foreground">Profit: €{calculations.profit.toFixed(2)}</p>
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -646,42 +619,59 @@ export default function Prints() {
               <Button variant="accent" onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4" />New Print</Button>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {prints.map((print) => {
-              const calc = getPrintCalculations(print);
-              return (
-                <Card key={print.id} className="shadow-card border-border/50">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center"><FileText className="w-5 h-5 text-accent" /></div>
-                        <div>
-                          <CardTitle className="text-lg">{print.name}</CardTitle>
-                          <CardDescription>{calc.printer?.name} • {calc.filament?.name}</CardDescription>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(print)}><Edit className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(print.id)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1"><Package className="w-4 h-4" />{print.filament_used_grams}g</span>
-                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{print.print_time_hours}h</span>
-                    </div>
-                    <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Cost</span><span className="font-medium">€{calc.totalCost.toFixed(2)}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Sale Price</span><span className="font-bold text-lg text-accent">€{calc.recommendedPrice.toFixed(2)}</span></div>
-                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">Profit</span><span className="font-medium text-green-600">€{calc.profit.toFixed(2)}</span></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+        ) : prints.length > 0 && (
+          <Card className="shadow-card border-border/50 overflow-hidden">
+            <ResizablePanelGroup direction="horizontal" className="min-h-[600px]">
+              <ResizablePanel defaultSize={40} minSize={30}>
+                <div className="p-4 border-b border-border/50">
+                  <h3 className="font-semibold">Your Prints ({prints.length})</h3>
+                </div>
+                <ScrollArea className="h-[550px]">
+                  <div className="p-4 space-y-3">
+                    {prints.map((print) => {
+                      const calc = getPrintCalculations(print);
+                      return (
+                        <PrintListItem
+                          key={print.id}
+                          id={print.id}
+                          name={print.name}
+                          printerName={calc.printer?.name || 'Unknown'}
+                          filamentName={calc.filament?.name || 'Unknown'}
+                          filamentUsedGrams={print.filament_used_grams}
+                          printTimeHours={print.print_time_hours}
+                          totalCost={calc.totalCost}
+                          recommendedPrice={calc.recommendedPrice}
+                          profit={calc.profit}
+                          isSelected={selectedPrintId === print.id}
+                          onSelect={() => setSelectedPrintId(print.id)}
+                          onEdit={() => openEditDialog(print)}
+                          onDelete={() => handleDelete(print.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={60} minSize={40}>
+                <PrintDetailPanel
+                  print={selectedPrint && selectedPrintCalc ? {
+                    id: selectedPrint.id,
+                    name: selectedPrint.name,
+                    printerName: selectedPrintCalc.printer?.name || 'Unknown',
+                    filamentName: selectedPrintCalc.filament?.name || 'Unknown',
+                    filamentUsedGrams: selectedPrint.filament_used_grams,
+                    printTimeHours: selectedPrint.print_time_hours,
+                    profitMarginPercent: selectedPrint.profit_margin_percent || 0,
+                    discountPercent: selectedPrint.discount_percent || 0,
+                  } : null}
+                  calculations={selectedPrintCalc}
+                  onExportCSV={handleExportCSV}
+                  onExportPDF={handleExportPDF}
+                />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </Card>
         )}
       </div>
     </AppLayout>
