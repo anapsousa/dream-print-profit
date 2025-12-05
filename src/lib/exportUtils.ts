@@ -171,3 +171,26 @@ export function exportPrintToPDF(data: PrintExportData) {
   printWindow.document.write(html);
   printWindow.document.close();
 }
+
+export function exportMultiplePrintsToCSV(prints: PrintExportData[]) {
+  const headers = ['Name', 'Printer', 'Filament', 'Filament (g)', 'Time (h)', 'Total Cost', 'Price', 'Profit'];
+  const rows = prints.map(p => [
+    p.name,
+    p.printerName,
+    p.filamentName,
+    p.filamentUsedGrams.toString(),
+    p.printTimeHours.toString(),
+    `€${p.calculations.totalCost.toFixed(2)}`,
+    `€${p.calculations.recommendedPrice.toFixed(2)}`,
+    `€${p.calculations.profit.toFixed(2)}`,
+  ]);
+
+  const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.setAttribute('href', URL.createObjectURL(blob));
+  link.setAttribute('download', `prints_export_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}

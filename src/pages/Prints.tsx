@@ -13,12 +13,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SUBSCRIPTION_TIERS } from '@/lib/constants';
-import { Plus, FileText, Loader2, Clock, Package, Truck, Wrench, Scissors, Search, Filter } from 'lucide-react';
+import { Plus, FileText, Loader2, Clock, Package, Truck, Wrench, Scissors, Search, Filter, ArrowUpDown, Trash2, Download, CheckSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PrintListItem } from '@/components/prints/PrintListItem';
 import { PrintDetailPanel } from '@/components/prints/PrintDetailPanel';
-import { exportPrintToCSV, exportPrintToPDF } from '@/lib/exportUtils';
+import { exportPrintToCSV, exportPrintToPDF, exportMultiplePrintsToCSV } from '@/lib/exportUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Checkbox } from '@/components/ui/checkbox';
+
+type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc' | 'cost-asc' | 'cost-desc' | 'profit-asc' | 'profit-desc';
 
 interface PrintType {
   id: string;
@@ -112,10 +115,13 @@ export default function Prints() {
   const [mobileTab, setMobileTab] = useState<'list' | 'details'>('list');
   const { toast } = useToast();
 
-  // Search and filter state
+  // Search, filter, sort, and batch selection state
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPrinter, setFilterPrinter] = useState<string>('all');
   const [filterFilament, setFilterFilament] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchMode, setBatchMode] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -212,15 +218,35 @@ export default function Prints() {
     setDialogOpen(true);
   }
 
-  // Filtered prints
+  // Filtered and sorted prints
   const filteredPrints = useMemo(() => {
-    return prints.filter(print => {
+    let result = prints.filter(print => {
       const matchesSearch = print.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPrinter = filterPrinter === 'all' || print.printer_id === filterPrinter;
       const matchesFilament = filterFilament === 'all' || print.filament_id === filterFilament;
       return matchesSearch && matchesPrinter && matchesFilament;
     });
-  }, [prints, searchQuery, filterPrinter, filterFilament]);
+
+    // Sort
+    result.sort((a, b) => {
+      const calcA = getPrintCalculations(a);
+      const calcB = getPrintCalculations(b);
+      switch (sortBy) {
+        case 'date-desc': return 0; // Already sorted by created_at desc from DB
+        case 'date-asc': return -1; // Reverse
+        case 'name-asc': return a.name.localeCompare(b.name);
+        case 'name-desc': return b.name.localeCompare(a.name);
+        case 'cost-asc': return calcA.totalCost - calcB.totalCost;
+        case 'cost-desc': return calcB.totalCost - calcA.totalCost;
+        case 'profit-asc': return calcA.profit - calcB.profit;
+        case 'profit-desc': return calcB.profit - calcA.profit;
+        default: return 0;
+      }
+    });
+
+    if (sortBy === 'date-asc') result.reverse();
+    return result;
+  }, [prints, searchQuery, filterPrinter, filterFilament, sortBy, printers, filaments, electricitySettings, fixedExpenses, shippingOptions, laborSettings]);
 
   const totalConsumablesCost = useMemo(() => {
     if (form.consumables_cost) return parseFloat(form.consumables_cost) || 0;
@@ -424,6 +450,55 @@ export default function Prints() {
       profitMarginPercent: selectedPrint.profit_margin_percent || 0,
       discountPercent: selectedPrint.discount_percent || 0,
     });
+  };
+
+  // Batch operations
+  const toggleBatchMode = () => {
+    setBatchMode(!batchMode);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredPrints.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredPrints.map(p => p.id)));
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} print(s)?`)) return;
+    
+    const { error } = await supabase.from('prints').delete().in('id', Array.from(selectedIds));
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } else {
+      toast({ title: `Deleted ${selectedIds.size} prints` });
+      setSelectedIds(new Set());
+      setBatchMode(false);
+      if (selectedPrintId && selectedIds.has(selectedPrintId)) setSelectedPrintId(null);
+      fetchData();
+    }
+  };
+
+  const handleBatchExport = () => {
+    if (selectedIds.size === 0) return;
+    const printsToExport = prints.filter(p => selectedIds.has(p.id)).map(print => {
+      const calc = getPrintCalculations(print);
+      return {
+        name: print.name,
+        printerName: calc.printer?.name || 'Unknown',
+        filamentName: calc.filament?.name || 'Unknown',
+        filamentUsedGrams: print.filament_used_grams,
+        printTimeHours: print.print_time_hours,
+        calculations: calc,
+        profitMarginPercent: print.profit_margin_percent || 0,
+        discountPercent: print.discount_percent || 0,
+      };
+    });
+    exportMultiplePrintsToCSV(printsToExport);
+    toast({ title: `Exported ${selectedIds.size} prints to CSV` });
   };
 
   const canCreatePrint = printers.length > 0 && filaments.length > 0;
@@ -667,7 +742,7 @@ export default function Prints() {
                   <TabsTrigger value="details" disabled={!selectedPrint}>Details</TabsTrigger>
                 </TabsList>
                 <TabsContent value="list" className="m-0">
-                  {/* Search and filter bar */}
+                  {/* Search, filter, sort bar */}
                   <div className="p-3 border-b border-border/50 space-y-3">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -700,6 +775,44 @@ export default function Prints() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="flex gap-2">
+                      <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                        <SelectTrigger className="flex-1">
+                          <ArrowUpDown className="w-3 h-3 mr-1" />
+                          <SelectValue placeholder="Sort by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="date-desc">Newest first</SelectItem>
+                          <SelectItem value="date-asc">Oldest first</SelectItem>
+                          <SelectItem value="name-asc">Name A-Z</SelectItem>
+                          <SelectItem value="name-desc">Name Z-A</SelectItem>
+                          <SelectItem value="cost-asc">Cost: Low to High</SelectItem>
+                          <SelectItem value="cost-desc">Cost: High to Low</SelectItem>
+                          <SelectItem value="profit-asc">Profit: Low to High</SelectItem>
+                          <SelectItem value="profit-desc">Profit: High to Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant={batchMode ? "secondary" : "outline"} size="icon" onClick={toggleBatchMode}>
+                        <CheckSquare className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    {batchMode && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                        <Checkbox
+                          checked={selectedIds.size === filteredPrints.length && filteredPrints.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                        <span className="text-xs text-muted-foreground flex-1">
+                          {selectedIds.size} selected
+                        </span>
+                        <Button variant="outline" size="sm" onClick={handleBatchExport} disabled={selectedIds.size === 0}>
+                          <Download className="w-3 h-3 mr-1" />Export
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={handleBatchDelete} disabled={selectedIds.size === 0}>
+                          <Trash2 className="w-3 h-3 mr-1" />Delete
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <ScrollArea className="h-[500px]">
                     <div className="p-3 space-y-3">
@@ -720,6 +833,13 @@ export default function Prints() {
                             recommendedPrice={calc.recommendedPrice}
                             profit={calc.profit}
                             isSelected={selectedPrintId === print.id}
+                            showCheckbox={batchMode}
+                            isChecked={selectedIds.has(print.id)}
+                            onCheck={(checked) => {
+                              const newSet = new Set(selectedIds);
+                              checked ? newSet.add(print.id) : newSet.delete(print.id);
+                              setSelectedIds(newSet);
+                            }}
                             onSelect={() => handleSelectPrint(print.id)}
                             onEdit={() => openEditDialog(print)}
                             onDelete={() => handleDelete(print.id)}
@@ -751,10 +871,13 @@ export default function Prints() {
               /* Desktop: Resizable panels */
               <ResizablePanelGroup direction="horizontal" className="min-h-[600px]">
                 <ResizablePanel defaultSize={40} minSize={30}>
-                  {/* Search and filter bar */}
+                  {/* Search, filter, sort bar */}
                   <div className="p-4 border-b border-border/50 space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold">Your Prints ({filteredPrints.length})</h3>
+                      <Button variant={batchMode ? "secondary" : "outline"} size="sm" onClick={toggleBatchMode}>
+                        <CheckSquare className="w-4 h-4 mr-1" />Batch
+                      </Button>
                     </div>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -786,7 +909,40 @@ export default function Prints() {
                           {filaments.map((f) => (<SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>))}
                         </SelectContent>
                       </Select>
+                      <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                        <SelectTrigger className="w-[140px]">
+                          <ArrowUpDown className="w-3 h-3 mr-1" />
+                          <SelectValue placeholder="Sort" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="date-desc">Newest</SelectItem>
+                          <SelectItem value="date-asc">Oldest</SelectItem>
+                          <SelectItem value="name-asc">Name A-Z</SelectItem>
+                          <SelectItem value="name-desc">Name Z-A</SelectItem>
+                          <SelectItem value="cost-asc">Cost ↑</SelectItem>
+                          <SelectItem value="cost-desc">Cost ↓</SelectItem>
+                          <SelectItem value="profit-asc">Profit ↑</SelectItem>
+                          <SelectItem value="profit-desc">Profit ↓</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+                    {batchMode && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                        <Checkbox
+                          checked={selectedIds.size === filteredPrints.length && filteredPrints.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                        <span className="text-sm text-muted-foreground flex-1">
+                          {selectedIds.size} selected
+                        </span>
+                        <Button variant="outline" size="sm" onClick={handleBatchExport} disabled={selectedIds.size === 0}>
+                          <Download className="w-3 h-3 mr-1" />Export CSV
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={handleBatchDelete} disabled={selectedIds.size === 0}>
+                          <Trash2 className="w-3 h-3 mr-1" />Delete
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <ScrollArea className="h-[480px]">
                     <div className="p-4 space-y-3">
@@ -807,6 +963,13 @@ export default function Prints() {
                             recommendedPrice={calc.recommendedPrice}
                             profit={calc.profit}
                             isSelected={selectedPrintId === print.id}
+                            showCheckbox={batchMode}
+                            isChecked={selectedIds.has(print.id)}
+                            onCheck={(checked) => {
+                              const newSet = new Set(selectedIds);
+                              checked ? newSet.add(print.id) : newSet.delete(print.id);
+                              setSelectedIds(newSet);
+                            }}
                             onSelect={() => handleSelectPrint(print.id)}
                             onEdit={() => openEditDialog(print)}
                             onDelete={() => handleDelete(print.id)}
