@@ -1,76 +1,77 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SUBSCRIPTION_TIERS } from '@/lib/constants';
 import { Logo } from '@/components/Logo';
+import { LanguageSwitcherCompact } from '@/components/LanguageSwitcher';
 import { Check, Loader2, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
-
-const tiers = [
-  {
-    key: 'free' as const,
-    name: 'Free',
-    price: 0,
-    description: 'Get started with basic features',
-    features: [
-      'Up to 15 saved prints',
-      'Unlimited printers & filaments',
-      'Cost calculations',
-      'Profit margin calculator',
-    ],
-    cta: 'Current Plan',
-    highlighted: false,
-  },
-  {
-    key: 'standard' as const,
-    name: 'Standard',
-    price: 5,
-    description: 'For hobbyists & small businesses',
-    features: [
-      'Up to 100 saved prints',
-      'Everything in Free',
-      'Priority support',
-      'Export reports (coming soon)',
-    ],
-    cta: 'Upgrade to Standard',
-    highlighted: true,
-  },
-  {
-    key: 'pro' as const,
-    name: 'Pro',
-    price: 10,
-    description: 'For professional makers',
-    features: [
-      'Up to 200 saved prints',
-      'Everything in Standard',
-      'Advanced analytics (coming soon)',
-      'API access (coming soon)',
-    ],
-    cta: 'Upgrade to Pro',
-    highlighted: false,
-  },
-];
 
 export default function Pricing() {
   const { user, subscription } = useAuth();
+  const { t } = useLanguage();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  const tiers = [
+    {
+      key: 'free' as const,
+      name: t('pricing.tier.free.name'),
+      price: 0,
+      description: t('pricing.tier.free.description'),
+      features: [
+        t('pricing.tier.free.feature1'),
+        t('pricing.tier.free.feature2'),
+        t('pricing.tier.free.feature3'),
+        t('pricing.tier.free.feature4'),
+      ],
+      cta: t('pricing.currentPlan'),
+      highlighted: false,
+    },
+    {
+      key: 'standard' as const,
+      name: t('pricing.tier.standard.name'),
+      price: 5,
+      description: t('pricing.tier.standard.description'),
+      features: [
+        t('pricing.tier.standard.feature1'),
+        t('pricing.tier.standard.feature2'),
+        t('pricing.tier.standard.feature3'),
+        t('pricing.tier.standard.feature4'),
+      ],
+      cta: t('pricing.upgradeToStandard'),
+      highlighted: true,
+    },
+    {
+      key: 'pro' as const,
+      name: t('pricing.tier.pro.name'),
+      price: 10,
+      description: t('pricing.tier.pro.description'),
+      features: [
+        t('pricing.tier.pro.feature1'),
+        t('pricing.tier.pro.feature2'),
+        t('pricing.tier.pro.feature3'),
+        t('pricing.tier.pro.feature4'),
+      ],
+      cta: t('pricing.upgradeToPro'),
+      highlighted: false,
+    },
+  ];
+
   useEffect(() => {
     if (searchParams.get('subscription') === 'canceled') {
       toast({
-        title: 'Checkout canceled',
-        description: 'No charges were made. Feel free to try again when ready.',
+        title: t('pricing.checkoutCanceled'),
+        description: t('pricing.noCharges'),
       });
     }
-  }, [searchParams, toast]);
+  }, [searchParams, toast, t]);
 
   async function handleUpgrade(tierKey: 'standard' | 'pro') {
     if (!user) {
@@ -96,8 +97,8 @@ export default function Pricing() {
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Could not start checkout process. Please try again.',
+        title: t('error.generic'),
+        description: t('pricing.couldNotStart'),
       });
     }
 
@@ -107,8 +108,9 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header with Logo */}
-      <header className="max-w-6xl mx-auto px-4 py-6">
+      <header className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
         <Logo size="md" />
+        <LanguageSwitcherCompact />
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -117,7 +119,7 @@ export default function Pricing() {
           <Button variant="ghost" asChild className="mb-8">
             <Link to="/dashboard">
               <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
+              {t('nav.backToDashboard')}
             </Link>
           </Button>
         )}
@@ -125,10 +127,10 @@ export default function Pricing() {
         {/* Header */}
         <div className="text-center mb-12 animate-slide-up">
           <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
-            Choose Your <span className="text-gradient">Plan</span>
+            {t('pricing.title')} <span className="text-gradient">{t('pricing.titleHighlight')}</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Start free and upgrade as you grow. All plans include unlimited printers and filaments.
+            {t('pricing.subtitle')}
           </p>
         </div>
 
@@ -148,7 +150,7 @@ export default function Pricing() {
                 {tier.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="px-4 py-1 rounded-full text-xs font-semibold gradient-primary text-primary-foreground">
-                      Most Popular
+                      {t('pricing.mostPopular')}
                     </span>
                   </div>
                 )}
@@ -157,7 +159,7 @@ export default function Pricing() {
                   <CardDescription>{tier.description}</CardDescription>
                   <div className="mt-4">
                     <span className="text-4xl font-bold">€{tier.price}</span>
-                    {tier.price > 0 && <span className="text-muted-foreground">/month</span>}
+                    {tier.price > 0 && <span className="text-muted-foreground">{t('pricing.perMonth')}</span>}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -178,7 +180,7 @@ export default function Pricing() {
                       className="w-full"
                       disabled={isCurrentPlan}
                     >
-                      {isCurrentPlan ? 'Current Plan' : 'Free Forever'}
+                      {isCurrentPlan ? t('pricing.currentPlan') : t('pricing.freeForever')}
                     </Button>
                   ) : (
                     <Button
@@ -188,7 +190,7 @@ export default function Pricing() {
                       disabled={isCurrentPlan || loadingTier === tier.key}
                     >
                       {loadingTier === tier.key && <Loader2 className="w-4 h-4 animate-spin" />}
-                      {isCurrentPlan ? 'Current Plan' : tier.cta}
+                      {isCurrentPlan ? t('pricing.currentPlan') : tier.cta}
                     </Button>
                   )}
                 </CardContent>
@@ -200,7 +202,7 @@ export default function Pricing() {
         {/* FAQ */}
         <div className="mt-16 text-center">
           <p className="text-muted-foreground">
-            Questions? Contact us at{' '}
+            {t('common.questions')} {t('common.contactUs')}{' '}
             <a href="mailto:support@dr3amtoreal.com" className="text-primary hover:underline">
               support@dr3amtoreal.com
             </a>
