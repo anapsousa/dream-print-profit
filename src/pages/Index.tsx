@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Logo } from '@/components/Logo';
+import { LanguageSwitcherCompact } from '@/components/LanguageSwitcher';
 import { Zap, Calculator, TrendingUp, DollarSign, Printer, Package, FileText, ArrowRight } from 'lucide-react';
 
 export default function Index() {
   const { user, loading } = useAuth();
+  const { t } = useLanguage();
 
   if (loading) {
     return (
@@ -26,11 +29,11 @@ export default function Index() {
             <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 shadow-glow">
               <Zap className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h1 className="font-display text-2xl font-bold mb-2">Welcome Back!</h1>
-            <p className="text-muted-foreground mb-6">Continue to your dashboard</p>
+            <h1 className="font-display text-2xl font-bold mb-2">{t('landing.welcomeBack')}</h1>
+            <p className="text-muted-foreground mb-6">{t('landing.continueToDashboard')}</p>
             <Button asChild size="lg" className="w-full">
               <Link to="/dashboard">
-                Go to Dashboard
+                {t('landing.goToDashboard')}
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </Button>
@@ -48,11 +51,12 @@ export default function Index() {
         <nav className="relative z-10 max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
           <Logo size="md" />
           <div className="flex items-center gap-4">
+            <LanguageSwitcherCompact />
             <Button variant="ghost" asChild>
-              <Link to="/pricing">Pricing</Link>
+              <Link to="/pricing">{t('nav.pricing')}</Link>
             </Button>
             <Button asChild>
-              <Link to="/auth">Get Started</Link>
+              <Link to="/auth">{t('nav.getStarted')}</Link>
             </Button>
           </div>
         </nav>
@@ -60,23 +64,22 @@ export default function Index() {
         <div className="relative z-10 max-w-6xl mx-auto px-4 py-20 md:py-32">
           <div className="text-center max-w-3xl mx-auto animate-slide-up">
             <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight mb-6">
-              Know Your <span className="text-gradient">True Costs</span>,{' '}
+              {t('landing.hero.title1')} <span className="text-gradient">{t('landing.hero.title2')}</span>,{' '}
               <br className="hidden md:block" />
-              Set <span className="text-gradient">Profitable Prices</span>
+              {t('landing.hero.title3')} <span className="text-gradient">{t('landing.hero.title4')}</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              The smart 3D printing cost calculator that helps makers, hobbyists, and entrepreneurs 
-              understand their real costs and maximize profits.
+              {t('landing.hero.subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="xl" variant="gradient" asChild>
                 <Link to="/auth">
-                  Start Free
+                  {t('landing.hero.startFree')}
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>
               <Button size="xl" variant="outline" asChild>
-                <Link to="/pricing">View Pricing</Link>
+                <Link to="/pricing">{t('landing.hero.viewPricing')}</Link>
               </Button>
             </div>
           </div>
@@ -88,10 +91,10 @@ export default function Index() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-              Everything You Need to Price Your Prints
+              {t('landing.features.title')}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Track materials, energy, depreciation, and overhead—all in one place.
+              {t('landing.features.subtitle')}
             </p>
           </div>
 
@@ -101,9 +104,9 @@ export default function Index() {
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                   <Calculator className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="font-display text-xl font-semibold mb-2">Accurate Cost Calculation</h3>
+                <h3 className="font-display text-xl font-semibold mb-2">{t('landing.features.accurateCost.title')}</h3>
                 <p className="text-muted-foreground">
-                  Material, energy, printer depreciation, and fixed expenses—all factored in automatically.
+                  {t('landing.features.accurateCost.desc')}
                 </p>
               </CardContent>
             </Card>
@@ -113,9 +116,9 @@ export default function Index() {
                 <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-4">
                   <TrendingUp className="w-6 h-6 text-secondary" />
                 </div>
-                <h3 className="font-display text-xl font-semibold mb-2">Profit Optimization</h3>
+                <h3 className="font-display text-xl font-semibold mb-2">{t('landing.features.profitOptimization.title')}</h3>
                 <p className="text-muted-foreground">
-                  Set your desired margin and discount, see your recommended price and expected profit instantly.
+                  {t('landing.features.profitOptimization.desc')}
                 </p>
               </CardContent>
             </Card>
@@ -125,9 +128,9 @@ export default function Index() {
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
                   <DollarSign className="w-6 h-6 text-accent" />
                 </div>
-                <h3 className="font-display text-xl font-semibold mb-2">Expense Tracking</h3>
+                <h3 className="font-display text-xl font-semibold mb-2">{t('landing.features.expenseTracking.title')}</h3>
                 <p className="text-muted-foreground">
-                  Add rent, utilities, and other fixed costs. They're automatically allocated across your prints.
+                  {t('landing.features.expenseTracking.desc')}
                 </p>
               </CardContent>
             </Card>
@@ -137,9 +140,9 @@ export default function Index() {
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
                   <Printer className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="font-display text-xl font-semibold mb-2">Multiple Printers</h3>
+                <h3 className="font-display text-xl font-semibold mb-2">{t('landing.features.multiplePrinters.title')}</h3>
                 <p className="text-muted-foreground">
-                  Manage multiple machines with different purchase costs, power usage, and depreciation schedules.
+                  {t('landing.features.multiplePrinters.desc')}
                 </p>
               </CardContent>
             </Card>
@@ -149,9 +152,9 @@ export default function Index() {
                 <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-4">
                   <Package className="w-6 h-6 text-secondary" />
                 </div>
-                <h3 className="font-display text-xl font-semibold mb-2">Filament Library</h3>
+                <h3 className="font-display text-xl font-semibold mb-2">{t('landing.features.filamentLibrary.title')}</h3>
                 <p className="text-muted-foreground">
-                  Track all your filaments with per-gram costs. Auto-calculate from spool price and weight.
+                  {t('landing.features.filamentLibrary.desc')}
                 </p>
               </CardContent>
             </Card>
@@ -161,9 +164,9 @@ export default function Index() {
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
                   <FileText className="w-6 h-6 text-accent" />
                 </div>
-                <h3 className="font-display text-xl font-semibold mb-2">Print History</h3>
+                <h3 className="font-display text-xl font-semibold mb-2">{t('landing.features.printHistory.title')}</h3>
                 <p className="text-muted-foreground">
-                  Save and revisit past calculations. Perfect for recurring orders and price quotes.
+                  {t('landing.features.printHistory.desc')}
                 </p>
               </CardContent>
             </Card>
@@ -179,14 +182,14 @@ export default function Index() {
               <div className="absolute inset-0 gradient-hero opacity-5" />
               <div className="relative z-10">
                 <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-                  Start Pricing Your Prints Today
+                  {t('landing.cta.title')}
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-                  Join makers worldwide who use Dr3amToReal to understand their costs and set profitable prices.
+                  {t('landing.cta.subtitle')}
                 </p>
                 <Button size="xl" variant="gradient" asChild>
                   <Link to="/auth">
-                    Create Free Account
+                    {t('landing.cta.createAccount')}
                     <ArrowRight className="w-5 h-5" />
                   </Link>
                 </Button>
@@ -206,7 +209,7 @@ export default function Index() {
             <span className="font-display font-semibold">Dr3amToReal</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Dr3amToReal. All rights reserved.
+            © {new Date().getFullYear()} Dr3amToReal. {t('common.allRightsReserved')}
           </p>
         </div>
       </footer>

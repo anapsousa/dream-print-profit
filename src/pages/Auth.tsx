@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/Logo';
+import { LanguageSwitcherCompact } from '@/components/LanguageSwitcher';
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 
@@ -22,6 +24,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const { signIn, signUp, user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -57,9 +60,9 @@ export default function Auth() {
     if (error) {
       toast({
         variant: 'destructive',
-        title: 'Sign in failed',
+        title: t('auth.signInFailed'),
         description: error.message === 'Invalid login credentials' 
-          ? 'Incorrect email or password. Please try again.'
+          ? t('auth.incorrectCredentials')
           : error.message,
       });
     } else {
@@ -78,17 +81,17 @@ export default function Auth() {
     if (error) {
       let message = error.message;
       if (error.message.includes('already registered')) {
-        message = 'This email is already registered. Try signing in instead.';
+        message = t('auth.emailRegistered');
       }
       toast({
         variant: 'destructive',
-        title: 'Sign up failed',
+        title: t('auth.signUpFailed'),
         description: message,
       });
     } else {
       toast({
-        title: 'Account created!',
-        description: 'You can now sign in to your account.',
+        title: t('auth.accountCreated'),
+        description: t('auth.canSignIn'),
       });
       navigate('/dashboard');
     }
@@ -97,17 +100,20 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-slide-up">
-        {/* Logo */}
-        <div className="text-center mb-8">
+        {/* Logo & Language */}
+        <div className="text-center mb-8 space-y-4">
           <Logo size="lg" showSubtitle className="justify-center" />
+          <div className="flex justify-center">
+            <LanguageSwitcherCompact />
+          </div>
         </div>
 
         <Card className="shadow-card border-border/50">
           <Tabs defaultValue="signin" className="w-full">
             <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger value="signin">{t('auth.signIn')}</TabsTrigger>
+                <TabsTrigger value="signup">{t('auth.signUp')}</TabsTrigger>
               </TabsList>
             </CardHeader>
 
@@ -115,11 +121,11 @@ export default function Auth() {
               <form onSubmit={handleSignIn}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email">{t('auth.email')}</Label>
                     <Input
                       id="signin-email"
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder={t('auth.emailPlaceholder')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={loading}
@@ -127,11 +133,11 @@ export default function Auth() {
                     {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <Label htmlFor="signin-password">{t('auth.password')}</Label>
                     <Input
                       id="signin-password"
                       type="password"
-                      placeholder="••••••••"
+                      placeholder={t('auth.passwordPlaceholder')}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={loading}
@@ -140,7 +146,7 @@ export default function Auth() {
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    Sign In
+                    {t('auth.signIn')}
                   </Button>
                 </CardContent>
               </form>
@@ -150,11 +156,11 @@ export default function Auth() {
               <form onSubmit={handleSignUp}>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email">{t('auth.email')}</Label>
                     <Input
                       id="signup-email"
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder={t('auth.emailPlaceholder')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={loading}
@@ -162,11 +168,11 @@ export default function Auth() {
                     {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password">{t('auth.password')}</Label>
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="••••••••"
+                      placeholder={t('auth.passwordPlaceholder')}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={loading}
@@ -175,7 +181,7 @@ export default function Auth() {
                   </div>
                   <Button type="submit" variant="gradient" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    Create Account
+                    {t('auth.createAccount')}
                   </Button>
                 </CardContent>
               </form>
@@ -184,7 +190,7 @@ export default function Auth() {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          By continuing, you agree to our terms of service.
+          {t('common.termsOfService')}
         </p>
       </div>
     </div>
