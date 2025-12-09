@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -127,6 +128,7 @@ const DISCOUNT_PERCENTAGES = [0, 5, 10, 20, 30, 50];
 
 export default function Prints() {
   const { user, subscription } = useAuth();
+  const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [prints, setPrints] = useState<PrintType[]>([]);
   const [printers, setPrinters] = useState<PrinterType[]>([]);
@@ -647,8 +649,8 @@ export default function Prints() {
       <div className="space-y-6 animate-slide-up">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Prints</h1>
-            <p className="text-muted-foreground mt-1">Calculate costs and pricing for your 3D prints</p>
+            <h1 className="font-display text-3xl font-bold">{t('prints.title')}</h1>
+            <p className="text-muted-foreground mt-1">{t('prints.subtitle')}</p>
           </div>
           {canCreatePrint ? (
             <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>

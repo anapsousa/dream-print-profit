@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -91,6 +92,7 @@ interface LaborData {
 
 export default function Dashboard() {
   const { user, subscription, refreshSubscription } = useAuth();
+  const { t } = useLanguage();
   const [stats, setStats] = useState<Stats>({ 
     printerCount: 0, filamentCount: 0, printCount: 0, 
     totalRevenue: 0, totalProfit: 0, avgProfitMargin: 0 
@@ -136,12 +138,12 @@ export default function Dashboard() {
   useEffect(() => {
     if (searchParams.get('subscription') === 'success') {
       toast({
-        title: 'Subscription activated!',
-        description: 'Thank you for upgrading. Enjoy your new features!',
+        title: t('subscription.activated'),
+        description: t('subscription.thankYou'),
       });
       refreshSubscription();
     }
-  }, [searchParams, toast, refreshSubscription]);
+  }, [searchParams, toast, refreshSubscription, t]);
 
   useEffect(() => {
     async function fetchData() {
@@ -270,16 +272,16 @@ export default function Dashboard() {
     }), { filament: 0, energy: 0, depreciation: 0, fixed: 0, preparation: 0, postProcessing: 0, shipping: 0, consumables: 0 });
 
     return [
-      { name: 'Filament', value: parseFloat(totals.filament.toFixed(2)) },
-      { name: 'Energy', value: parseFloat(totals.energy.toFixed(2)) },
-      { name: 'Depreciation', value: parseFloat(totals.depreciation.toFixed(2)) },
-      { name: 'Fixed', value: parseFloat(totals.fixed.toFixed(2)) },
-      { name: 'Prep', value: parseFloat(totals.preparation.toFixed(2)) },
-      { name: 'Post-Proc', value: parseFloat(totals.postProcessing.toFixed(2)) },
-      { name: 'Shipping', value: parseFloat(totals.shipping.toFixed(2)) },
-      { name: 'Consumables', value: parseFloat(totals.consumables.toFixed(2)) },
+      { name: t('prints.filament') || 'Filament', value: parseFloat(totals.filament.toFixed(2)) },
+      { name: t('dashboard.energy') || 'Energy', value: parseFloat(totals.energy.toFixed(2)) },
+      { name: t('dashboard.depreciation') || 'Depreciation', value: parseFloat(totals.depreciation.toFixed(2)) },
+      { name: t('dashboard.fixed') || 'Fixed', value: parseFloat(totals.fixed.toFixed(2)) },
+      { name: t('dashboard.preparation') || 'Prep', value: parseFloat(totals.preparation.toFixed(2)) },
+      { name: t('dashboard.postProcessing') || 'Post-Proc', value: parseFloat(totals.postProcessing.toFixed(2)) },
+      { name: t('settings.shipping') || 'Shipping', value: parseFloat(totals.shipping.toFixed(2)) },
+      { name: t('settings.consumables') || 'Consumables', value: parseFloat(totals.consumables.toFixed(2)) },
     ];
-  }, [printCalculations]);
+  }, [printCalculations, t]);
 
   const tierInfo = SUBSCRIPTION_TIERS[subscription.tier];
   const usagePercent = Math.min((stats.printCount / tierInfo.maxPrints) * 100, 100);
@@ -306,17 +308,17 @@ export default function Dashboard() {
               <div className="mx-auto w-16 h-16 rounded-2xl gradient-accent flex items-center justify-center mb-4">
                 <Zap className="w-8 h-8 text-accent-foreground" />
               </div>
-              <CardTitle className="font-display text-2xl">Welcome to Dr3amToReal!</CardTitle>
+              <CardTitle className="font-display text-2xl">{t('dashboard.setupWelcome')}</CardTitle>
               <CardDescription>
-                Let's get you started by setting up your electricity configuration.
+                {t('dashboard.setupDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
-                This helps calculate accurate energy costs for your prints.
+                {t('dashboard.setupHelp')}
               </p>
               <Button asChild className="w-full" size="lg">
-                <Link to="/settings">Set Up Electricity Settings</Link>
+                <Link to="/settings">{t('dashboard.setupElectricity')}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -329,9 +331,9 @@ export default function Dashboard() {
     <AppLayout>
       <div className="space-y-8 animate-slide-up">
         <div>
-          <h1 className="font-display text-3xl font-bold">Dashboard</h1>
+          <h1 className="font-display text-3xl font-bold">{t('dashboard.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Welcome back! Here's an overview of your 3D printing costs.
+            {t('dashboard.welcomeSubtitle')}
           </p>
         </div>
 
@@ -340,14 +342,14 @@ export default function Dashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-semibold">Print Storage</h3>
+                <h3 className="font-semibold">{t('dashboard.printStorage')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {stats.printCount} of {tierInfo.maxPrints} prints used
+                  {stats.printCount} {t('dashboard.of')} {tierInfo.maxPrints} {t('dashboard.printsUsed')}
                 </p>
               </div>
               {subscription.tier === 'free' && (
                 <Button variant="accent" size="sm" asChild>
-                  <Link to="/pricing">Upgrade</Link>
+                  <Link to="/pricing">{t('dashboard.upgrade')}</Link>
                 </Button>
               )}
             </div>
@@ -369,7 +371,7 @@ export default function Dashboard() {
                   <Printer className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Printers</p>
+                  <p className="text-sm text-muted-foreground">{t('nav.printers')}</p>
                   <p className="text-2xl font-bold">{stats.printerCount}</p>
                 </div>
               </div>
@@ -383,7 +385,7 @@ export default function Dashboard() {
                   <Package className="w-6 h-6 text-secondary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Filaments</p>
+                  <p className="text-sm text-muted-foreground">{t('nav.filaments')}</p>
                   <p className="text-2xl font-bold">{stats.filamentCount}</p>
                 </div>
               </div>
@@ -397,7 +399,7 @@ export default function Dashboard() {
                   <DollarSign className="w-6 h-6 text-accent" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Revenue</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.totalRevenue')}</p>
                   <p className="text-2xl font-bold">€{aggregateStats.totalRevenue.toFixed(0)}</p>
                 </div>
               </div>
@@ -411,7 +413,7 @@ export default function Dashboard() {
                   <TrendingUp className="w-6 h-6 text-success" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Profit</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.totalProfit')}</p>
                   <p className="text-2xl font-bold text-success">€{aggregateStats.totalProfit.toFixed(0)}</p>
                 </div>
               </div>
@@ -425,9 +427,9 @@ export default function Dashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <LineChart className="w-5 h-5 text-primary" />
-                Cost vs Price Trends
+                {t('dashboard.costTrends')}
               </CardTitle>
-              <CardDescription>Recent prints cost and sale price comparison</CardDescription>
+              <CardDescription>{t('dashboard.costTrendsSubtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
               <CostTrendsChart data={costTrendsData} />
@@ -438,9 +440,9 @@ export default function Dashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <BarChart3 className="w-5 h-5 text-success" />
-                Profit Analysis
+                {t('dashboard.profitAnalysis')}
               </CardTitle>
-              <CardDescription>Cost vs profit for recent prints</CardDescription>
+              <CardDescription>{t('dashboard.profitAnalysisSubtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ProfitAnalysisChart data={profitAnalysisData} />
@@ -452,9 +454,9 @@ export default function Dashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
               <PieChart className="w-5 h-5 text-accent" />
-              Cost Distribution
+              {t('dashboard.costBreakdown')}
             </CardTitle>
-            <CardDescription>Where your production costs come from</CardDescription>
+            <CardDescription>{t('dashboard.costBreakdownSubtitle')}</CardDescription>
           </CardHeader>
           <CardContent>
             <CostBreakdownChart data={costBreakdownData} />
@@ -467,15 +469,15 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Printer className="w-5 h-5 text-primary" />
-                Add Printer
+                {t('dashboard.addPrinter')}
               </CardTitle>
-              <CardDescription>Set up a new 3D printer with cost details</CardDescription>
+              <CardDescription>{t('dashboard.addPrinterDesc') || 'Set up a new 3D printer with cost details'}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild className="w-full">
                 <Link to="/printers">
                   <Plus className="w-4 h-4" />
-                  Add Printer
+                  {t('printers.addNew')}
                 </Link>
               </Button>
             </CardContent>
@@ -485,15 +487,15 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-secondary" />
-                Add Filament
+                {t('dashboard.addFilament')}
               </CardTitle>
-              <CardDescription>Track your filament costs per gram</CardDescription>
+              <CardDescription>{t('dashboard.addFilamentDesc') || 'Track your filament costs per gram'}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button variant="secondary" asChild className="w-full">
                 <Link to="/filaments">
                   <Plus className="w-4 h-4" />
-                  Add Filament
+                  {t('filaments.addNew')}
                 </Link>
               </Button>
             </CardContent>
@@ -503,15 +505,15 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-accent" />
-                Calculate Print
+                {t('dashboard.createNewPrint')}
               </CardTitle>
-              <CardDescription>Get accurate cost & pricing for a print</CardDescription>
+              <CardDescription>{t('dashboard.createNewPrintDesc') || 'Get accurate cost & pricing for a print'}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button variant="accent" asChild className="w-full">
                 <Link to="/prints">
                   <Plus className="w-4 h-4" />
-                  New Print
+                  {t('prints.addNew')}
                 </Link>
               </Button>
             </CardContent>
