@@ -88,6 +88,14 @@ interface LaborData {
   post_processing_rate_per_hour: number;
 }
 
+interface GeneralSettingData {
+  vat_tax_rate: number;
+  default_profit_margin: number;
+  default_electricity_rate: number;
+  default_labor_rate: number;
+  failure_margin: number;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -105,6 +113,9 @@ export default function Dashboard() {
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpenseData[]>([]);
   const [shipping, setShipping] = useState<ShippingData[]>([]);
   const [labor, setLabor] = useState<LaborData | null>(null);
+  const [generalSettings, setGeneralSettings] = useState<GeneralSettingData | null>(null);
+  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   // Check if onboarding should be shown
   useEffect(() => {
@@ -135,7 +146,7 @@ export default function Dashboard() {
     async function fetchData() {
       if (!user) return;
 
-      const [printersRes, filamentsRes, printsRes, electricityRes, expensesRes, shippingRes, laborRes] = await Promise.all([
+      const [printersRes, filamentsRes, printsRes, electricityRes, expensesRes, shippingRes, laborRes, generalRes] = await Promise.all([
         supabase.from('printers').select('id, purchase_cost, depreciation_hours, maintenance_cost, power_watts, default_electricity_settings_id'),
         supabase.from('filaments').select('id, cost_per_gram'),
         supabase.from('prints').select('*').order('created_at', { ascending: true }),
@@ -143,6 +154,7 @@ export default function Dashboard() {
         supabase.from('fixed_expenses').select('monthly_amount, is_active'),
         supabase.from('shipping_options').select('id, price'),
         supabase.from('labor_settings').select('*').limit(1).single(),
+        supabase.from('general_settings').select('vat_tax_rate, default_profit_margin, default_electricity_rate, default_labor_rate, failure_margin').eq('user_id', user.id).limit(1).single(),
       ]);
 
       if (printersRes.data) setPrinters(printersRes.data);
@@ -152,6 +164,7 @@ export default function Dashboard() {
       if (expensesRes.data) setFixedExpenses(expensesRes.data);
       if (shippingRes.data) setShipping(shippingRes.data);
       if (laborRes.data) setLabor(laborRes.data);
+      if (generalRes.data) setGeneralSettings(generalRes.data);
 
       setStats(prev => ({
         ...prev,
@@ -177,7 +190,9 @@ export default function Dashboard() {
       const ship = shipping.find(s => s.id === print.shipping_option_id);
 
       const filamentCost = filament ? print.filament_used_grams * filament.cost_per_gram : 0;
-      const energyCost = printer && elec ? (printer.power_watts * print.print_time_hours / 1000) * elec.price_per_kwh : 0;
+      // Use default electricity rate if no electricity setting is found
+      const electricityRate = elec?.price_per_kwh || generalSettings?.default_electricity_rate || 0.35;
+      const energyCost = printer ? (printer.power_watts * print.print_time_hours / 1000) * electricityRate : 0;
       const depHours = printer?.depreciation_hours || 5000;
       const depreciationPerHour = printer ? (printer.purchase_cost + (printer.maintenance_cost || 0)) / depHours : 0;
       const depreciationCost = depreciationPerHour * print.print_time_hours;
@@ -187,18 +202,31 @@ export default function Dashboard() {
 
       const prepTime = (print.preparation_time_minutes || 0) + (print.slicing_time_minutes || 0) + (print.print_start_time_minutes || 0);
       const postTime = (print.remove_from_plate_minutes || 0) + (print.clean_supports_minutes || 0) + (print.additional_work_minutes || 0);
-      const prepRate = labor?.preparation_rate_per_hour || 15;
-      const postRate = labor?.post_processing_rate_per_hour || 12;
+      const prepRate = labor?.preparation_rate_per_hour || generalSettings?.default_labor_rate || 15;
+      const postRate = labor?.post_processing_rate_per_hour || generalSettings?.default_labor_rate || 12;
       const preparationCost = (prepTime / 60) * prepRate;
       const postProcessingCost = (postTime / 60) * postRate;
       const shippingCost = ship?.price || 0;
       const consumablesCost = print.consumables_cost || 0;
 
-      const totalCost = filamentCost + energyCost + depreciationCost + fixedCostShare + extraCosts + preparationCost + postProcessingCost + shippingCost + consumablesCost;
-      const profitMargin = print.profit_margin_percent || 0;
+      // Calculate base total cost
+      const baseTotalCost = filamentCost + energyCost + depreciationCost + fixedCostShare + extraCosts + preparationCost + postProcessingCost + shippingCost + consumablesCost;
+      
+      // Apply failure margin as a buffer
+      const failureMargin = generalSettings?.failure_margin || 10;
+      const failureMarginAmount = baseTotalCost * (failureMargin / 100);
+      const totalCost = baseTotalCost + failureMarginAmount;
+      
+      // Use default profit margin from general settings if not specified
+      const profitMargin = print.profit_margin_percent || generalSettings?.default_profit_margin || 30;
       const discount = print.discount_percent || 0;
       const priceBeforeDiscount = totalCost * (1 + profitMargin / 100);
-      const recommendedPrice = priceBeforeDiscount * (1 - discount / 100);
+      
+      // Apply VAT/Tax to the final price
+      const vatRate = generalSettings?.vat_tax_rate || 20;
+      const priceWithVAT = priceBeforeDiscount * (1 + vatRate / 100);
+      
+      const recommendedPrice = priceWithVAT * (1 - discount / 100);
       const profit = recommendedPrice - totalCost;
 
       return {
@@ -216,7 +244,7 @@ export default function Dashboard() {
         consumablesCost,
       };
     });
-  }, [prints, printers, filaments, electricity, fixedExpenses, shipping, labor]);
+  }, [prints, printers, filaments, electricity, fixedExpenses, shipping, labor, generalSettings]);
 
   // Aggregate stats
   const aggregateStats = useMemo(() => {

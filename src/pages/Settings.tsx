@@ -12,7 +12,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Zap, DollarSign, Edit, Trash2, Loader2, Package, Truck, Clock } from 'lucide-react';
+import { SUBSCRIPTION_TIERS } from '@/lib/constants';
+import { Plus, Zap, DollarSign, Edit, Trash2, Loader2, Crown, ExternalLink, Package, Truck, Clock, FileText, Percent, AlertTriangle, Upload, Image as ImageIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ElectricitySetting {
   id: string;
@@ -51,6 +54,18 @@ interface LaborSetting {
   post_processing_rate_per_hour: number;
 }
 
+interface GeneralSetting {
+  id: string;
+  company_name: string | null;
+  currency: string;
+  company_logo_url: string | null;
+  vat_tax_rate: number;
+  default_profit_margin: number;
+  default_electricity_rate: number;
+  default_labor_rate: number;
+  failure_margin: number;
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -59,6 +74,7 @@ export default function Settings() {
   const [consumables, setConsumables] = useState<Consumable[]>([]);
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [laborSettings, setLaborSettings] = useState<LaborSetting | null>(null);
+  const [generalSettings, setGeneralSettings] = useState<GeneralSetting | null>(null);
   const [loading, setLoading] = useState(true);
   const [electricityDialogOpen, setElectricityDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
@@ -104,7 +120,18 @@ export default function Settings() {
     post_processing_rate_per_hour: '12',
   });
 
-  
+  const [generalForm, setGeneralForm] = useState({
+    company_name: '',
+    currency: 'EUR',
+    company_logo_url: '',
+    vat_tax_rate: '20',
+    default_profit_margin: '30',
+    default_electricity_rate: '0.35',
+    default_labor_rate: '25',
+    failure_margin: '10',
+  });
+
+  const tierInfo = SUBSCRIPTION_TIERS[subscription.tier];
 
   useEffect(() => {
     fetchData();
@@ -113,12 +140,13 @@ export default function Settings() {
   async function fetchData() {
     if (!user) return;
 
-    const [electricityRes, expensesRes, consumablesRes, shippingRes, laborRes] = await Promise.all([
+    const [electricityRes, expensesRes, consumablesRes, shippingRes, laborRes, generalRes] = await Promise.all([
       supabase.from('electricity_settings').select('*').order('created_at', { ascending: false }),
       supabase.from('fixed_expenses').select('*').order('created_at', { ascending: false }),
       supabase.from('consumables').select('*').order('created_at', { ascending: false }),
       supabase.from('shipping_options').select('*').order('created_at', { ascending: false }),
       supabase.from('labor_settings').select('*').limit(1).single(),
+      supabase.from('general_settings').select('*').eq('user_id', user.id).limit(1).single(),
     ]);
 
     if (electricityRes.data) setElectricitySettings(electricityRes.data);
@@ -130,6 +158,19 @@ export default function Settings() {
       setLaborForm({
         preparation_rate_per_hour: laborRes.data.preparation_rate_per_hour.toString(),
         post_processing_rate_per_hour: laborRes.data.post_processing_rate_per_hour.toString(),
+      });
+    }
+    if (generalRes.data) {
+      setGeneralSettings(generalRes.data);
+      setGeneralForm({
+        company_name: generalRes.data.company_name || '',
+        currency: generalRes.data.currency || 'EUR',
+        company_logo_url: generalRes.data.company_logo_url || '',
+        vat_tax_rate: generalRes.data.vat_tax_rate?.toString() || '20',
+        default_profit_margin: generalRes.data.default_profit_margin?.toString() || '30',
+        default_electricity_rate: generalRes.data.default_electricity_rate?.toString() || '0.35',
+        default_labor_rate: generalRes.data.default_labor_rate?.toString() || '25',
+        failure_margin: generalRes.data.failure_margin?.toString() || '10',
       });
     }
     setLoading(false);
@@ -333,10 +374,53 @@ export default function Settings() {
       error = res.error;
     }
     setSaving(false);
-    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
-    else { toast({ title: t('settings.laborSaved') }); fetchData(); }
+    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
+    else { toast({ title: 'Labor settings saved' }); fetchData(); }
   }
 
+  async function handleGeneralSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setSaving(true);
+    const data = {
+      user_id: user.id,
+      company_name: generalForm.company_name.trim() || null,
+      currency: generalForm.currency,
+      company_logo_url: generalForm.company_logo_url.trim() || null,
+      vat_tax_rate: parseFloat(generalForm.vat_tax_rate) || 20,
+      default_profit_margin: parseFloat(generalForm.default_profit_margin) || 30,
+      default_electricity_rate: parseFloat(generalForm.default_electricity_rate) || 0.35,
+      default_labor_rate: parseFloat(generalForm.default_labor_rate) || 25,
+      failure_margin: parseFloat(generalForm.failure_margin) || 10,
+    };
+    let error;
+    if (generalSettings) {
+      const res = await supabase.from('general_settings').update(data).eq('id', generalSettings.id);
+      error = res.error;
+    } else {
+      const res = await supabase.from('general_settings').insert([data]);
+      error = res.error;
+    }
+    setSaving(false);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } else {
+      toast({ title: 'General settings saved' });
+      fetchData();
+    }
+  }
+
+  async function handleManageSubscription() {
+    setManagingPortal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+      if (error) throw error;
+      if (data?.url) window.open(data.url, '_blank');
+    } catch {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not open subscription management' });
+    }
+    setManagingPortal(false);
+  }
 
   const totalMonthlyExpenses = fixedExpenses.filter(e => e.is_active).reduce((sum, e) => sum + e.monthly_amount, 0);
   const totalConsumablesCost = consumables.filter(c => c.is_active).reduce((sum, c) => sum + c.cost, 0);
@@ -349,15 +433,216 @@ export default function Settings() {
           <p className="text-muted-foreground mt-1">{t('settings.subtitle')}</p>
         </div>
 
-        <Tabs defaultValue="electricity" className="space-y-6">
+        <Tabs defaultValue="general" className="space-y-6">
           <TabsList className="flex-wrap h-auto gap-1">
-            <TabsTrigger value="electricity">{t('settings.electricity')}</TabsTrigger>
-            <TabsTrigger value="expenses">{t('settings.expenses')}</TabsTrigger>
-            <TabsTrigger value="consumables">{t('settings.consumables')}</TabsTrigger>
-            <TabsTrigger value="shipping">{t('settings.shipping')}</TabsTrigger>
-            <TabsTrigger value="labor">{t('settings.labor')}</TabsTrigger>
-            
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="electricity">Electricity</TabsTrigger>
+            <TabsTrigger value="expenses">Fixed Expenses</TabsTrigger>
+            <TabsTrigger value="consumables">Consumables</TabsTrigger>
+            <TabsTrigger value="shipping">Shipping</TabsTrigger>
+            <TabsTrigger value="labor">Labor Rates</TabsTrigger>
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
           </TabsList>
+
+          {/* General Tab */}
+          <TabsContent value="general" className="space-y-6">
+            <form onSubmit={handleGeneralSubmit} className="space-y-6">
+              {/* General Information Card */}
+              <Card className="shadow-card border-border/50">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle>General Information</CardTitle>
+                      <CardDescription>Company details and branding</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Company Name</Label>
+                      <Input
+                        value={generalForm.company_name}
+                        onChange={(e) => setGeneralForm({ ...generalForm, company_name: e.target.value })}
+                        placeholder="My 3D Print Shop"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Currency</Label>
+                      <Select value={generalForm.currency} onValueChange={(v) => setGeneralForm({ ...generalForm, currency: v })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="EUR">€ EUR - Euro</SelectItem>
+                          <SelectItem value="USD">$ USD - US Dollar</SelectItem>
+                          <SelectItem value="GBP">£ GBP - British Pound</SelectItem>
+                          <SelectItem value="CAD">$ CAD - Canadian Dollar</SelectItem>
+                          <SelectItem value="AUD">$ AUD - Australian Dollar</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Company Logo</Label>
+                    <div className="flex items-start gap-4">
+                      <div className="flex-1">
+                        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+                          {generalForm.company_logo_url ? (
+                            <img src={generalForm.company_logo_url} alt="Company logo" className="max-w-full max-h-32 mx-auto" />
+                          ) : (
+                            <div className="space-y-2">
+                              <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">No logo</p>
+                            </div>
+                          )}
+                        </div>
+                        <Input
+                          type="url"
+                          value={generalForm.company_logo_url}
+                          onChange={(e) => setGeneralForm({ ...generalForm, company_logo_url: e.target.value })}
+                          placeholder="Logo URL"
+                          className="mt-2"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Upload your company logo to appear on quotes and invoices. Recommended size: 400x400px. Max size: 2MB.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Financial Defaults Card */}
+              <Card className="shadow-card border-border/50">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+                        <Percent className="w-5 h-5 text-secondary" />
+                      </div>
+                      <div>
+                        <CardTitle>Financial Defaults</CardTitle>
+                        <CardDescription>Set your standard tax and profit rates</CardDescription>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>VAT / Tax Rate (%)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={generalForm.vat_tax_rate}
+                          onChange={(e) => setGeneralForm({ ...generalForm, vat_tax_rate: e.target.value })}
+                          placeholder="20"
+                        />
+                        <span className="text-muted-foreground">%</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Default tax rate applied to quotes.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Default Profit Margin (%)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={generalForm.default_profit_margin}
+                          onChange={(e) => setGeneralForm({ ...generalForm, default_profit_margin: e.target.value })}
+                          placeholder="30"
+                        />
+                        <span className="text-muted-foreground">%</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Target profit margin for your projects.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Cost Configuration Card */}
+              <Card className="shadow-card border-border/50">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-accent" />
+                      </div>
+                      <div>
+                        <CardTitle>Cost Configuration</CardTitle>
+                        <CardDescription>Used as defaults for new quotes</CardDescription>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Zap className="w-4 h-4" />
+                        Electricity Rate
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={generalForm.default_electricity_rate}
+                          onChange={(e) => setGeneralForm({ ...generalForm, default_electricity_rate: e.target.value })}
+                          placeholder="0.35"
+                        />
+                        <span className="text-muted-foreground">/kWh</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Cost of power from your utility provider.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Labor Rate
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={generalForm.default_labor_rate}
+                          onChange={(e) => setGeneralForm({ ...generalForm, default_labor_rate: e.target.value })}
+                          placeholder="25"
+                        />
+                        <span className="text-muted-foreground">/hr</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Your hourly rate for post-processing work.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        Failure Margin (%)
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={generalForm.failure_margin}
+                          onChange={(e) => setGeneralForm({ ...generalForm, failure_margin: e.target.value })}
+                          placeholder="10"
+                        />
+                        <span className="text-muted-foreground">%</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Buffer added to cover failed prints.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button type="submit" className="w-full" disabled={saving}>
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                Save General Settings
+              </Button>
+            </form>
+          </TabsContent>
 
           {/* Electricity Tab */}
           <TabsContent value="electricity" className="space-y-4">
