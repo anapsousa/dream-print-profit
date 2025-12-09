@@ -175,9 +175,9 @@ export default function Settings() {
     }
     setSaving(false);
     if (error) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
     } else {
-      toast({ title: editingElectricity ? 'Updated' : 'Added' });
+      toast({ title: editingElectricity ? t('settings.updated') : t('settings.added') });
       setElectricityDialogOpen(false);
       resetElectricityForm();
       fetchData();
@@ -185,10 +185,10 @@ export default function Settings() {
   }
 
   async function handleDeleteElectricity(id: string) {
-    if (!confirm('Delete this electricity profile?')) return;
+    if (!confirm(t('settings.deleteElectricityConfirm'))) return;
     const { error } = await supabase.from('electricity_settings').delete().eq('id', id);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
-    else { toast({ title: 'Deleted' }); fetchData(); }
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
+    else { toast({ title: t('settings.deleted') }); fetchData(); }
   }
 
   // Fixed Expenses functions
@@ -217,20 +217,20 @@ export default function Settings() {
       error = res.error;
     }
     setSaving(false);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
-    else { toast({ title: editingExpense ? 'Updated' : 'Added' }); setExpenseDialogOpen(false); resetExpenseForm(); fetchData(); }
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
+    else { toast({ title: editingExpense ? t('settings.updated') : t('settings.added') }); setExpenseDialogOpen(false); resetExpenseForm(); fetchData(); }
   }
 
   async function handleDeleteExpense(id: string) {
-    if (!confirm('Delete this expense?')) return;
+    if (!confirm(t('settings.deleteExpenseConfirm'))) return;
     const { error } = await supabase.from('fixed_expenses').delete().eq('id', id);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
-    else { toast({ title: 'Deleted' }); fetchData(); }
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
+    else { toast({ title: t('settings.deleted') }); fetchData(); }
   }
 
   async function handleToggleExpense(id: string, isActive: boolean) {
     const { error } = await supabase.from('fixed_expenses').update({ is_active: isActive }).eq('id', id);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
     else fetchData();
   }
 
@@ -260,20 +260,20 @@ export default function Settings() {
       error = res.error;
     }
     setSaving(false);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
-    else { toast({ title: editingConsumable ? 'Updated' : 'Added' }); setConsumableDialogOpen(false); resetConsumableForm(); fetchData(); }
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
+    else { toast({ title: editingConsumable ? t('settings.updated') : t('settings.added') }); setConsumableDialogOpen(false); resetConsumableForm(); fetchData(); }
   }
 
   async function handleDeleteConsumable(id: string) {
-    if (!confirm('Delete this consumable?')) return;
+    if (!confirm(t('settings.deleteConsumableConfirm'))) return;
     const { error } = await supabase.from('consumables').delete().eq('id', id);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
-    else { toast({ title: 'Deleted' }); fetchData(); }
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
+    else { toast({ title: t('settings.deleted') }); fetchData(); }
   }
 
   async function handleToggleConsumable(id: string, isActive: boolean) {
     const { error } = await supabase.from('consumables').update({ is_active: isActive }).eq('id', id);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
     else fetchData();
   }
 
@@ -303,15 +303,15 @@ export default function Settings() {
       error = res.error;
     }
     setSaving(false);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
-    else { toast({ title: editingShipping ? 'Updated' : 'Added' }); setShippingDialogOpen(false); resetShippingForm(); fetchData(); }
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
+    else { toast({ title: editingShipping ? t('settings.updated') : t('settings.added') }); setShippingDialogOpen(false); resetShippingForm(); fetchData(); }
   }
 
   async function handleDeleteShipping(id: string) {
-    if (!confirm('Delete this shipping option?')) return;
+    if (!confirm(t('settings.deleteShippingConfirm'))) return;
     const { error } = await supabase.from('shipping_options').delete().eq('id', id);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
-    else { toast({ title: 'Deleted' }); fetchData(); }
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
+    else { toast({ title: t('settings.deleted') }); fetchData(); }
   }
 
   // Labor settings
@@ -333,8 +333,8 @@ export default function Settings() {
       error = res.error;
     }
     setSaving(false);
-    if (error) toast({ variant: 'destructive', title: 'Error', description: error.message });
-    else { toast({ title: 'Labor settings saved' }); fetchData(); }
+    if (error) toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
+    else { toast({ title: t('settings.laborSaved') }); fetchData(); }
   }
 
 
@@ -363,42 +363,42 @@ export default function Settings() {
           <TabsContent value="electricity" className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Electricity Profiles</h2>
-                <p className="text-sm text-muted-foreground">Configure electricity costs</p>
+                <h2 className="text-xl font-semibold">{t('settings.electricityProfiles')}</h2>
+                <p className="text-sm text-muted-foreground">{t('settings.configureElectricity')}</p>
               </div>
               <Dialog open={electricityDialogOpen} onOpenChange={(open) => { setElectricityDialogOpen(open); if (!open) resetElectricityForm(); }}>
                 <DialogTrigger asChild>
-                  <Button><Plus className="w-4 h-4" />Add Profile</Button>
+                  <Button><Plus className="w-4 h-4" />{t('settings.addProfile')}</Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
-                    <DialogTitle>{editingElectricity ? 'Edit' : 'Add'} Electricity Profile</DialogTitle>
-                    <DialogDescription>Configure electricity rates</DialogDescription>
+                    <DialogTitle>{editingElectricity ? t('settings.editProfile') : t('settings.addElectricityProfile')}</DialogTitle>
+                    <DialogDescription>{t('settings.configureRates')}</DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleElectricitySubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Profile Name *</Label>
+                      <Label>{t('settings.profileName')} *</Label>
                       <Input value={electricityForm.name} onChange={(e) => setElectricityForm({ ...electricityForm, name: e.target.value })} placeholder="e.g. Home 3.45kVA" required />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Contracted Power (kVA)</Label>
+                        <Label>{t('settings.contractedPower')}</Label>
                         <Input type="number" step="0.01" value={electricityForm.contracted_power_kva} onChange={(e) => setElectricityForm({ ...electricityForm, contracted_power_kva: e.target.value })} placeholder="3.45" />
                       </div>
                       <div className="space-y-2">
-                        <Label>Price per kWh (€)</Label>
+                        <Label>{t('settings.pricePerKwh')}</Label>
                         <Input type="number" step="0.0001" value={electricityForm.price_per_kwh} onChange={(e) => setElectricityForm({ ...electricityForm, price_per_kwh: e.target.value })} placeholder="0.15" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Daily Fixed Cost (€)</Label>
+                      <Label>{t('settings.dailyFixedCost')}</Label>
                       <Input type="number" step="0.01" value={electricityForm.daily_fixed_cost} onChange={(e) => setElectricityForm({ ...electricityForm, daily_fixed_cost: e.target.value })} placeholder="0.00" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Notes</Label>
+                      <Label>{t('common.notes')}</Label>
                       <Textarea value={electricityForm.notes} onChange={(e) => setElectricityForm({ ...electricityForm, notes: e.target.value })} placeholder="Notes..." />
                     </div>
-                    <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}{editingElectricity ? 'Update' : 'Add'}</Button>
+                    <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}{editingElectricity ? t('common.update') : t('common.add')}</Button>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -406,8 +406,8 @@ export default function Settings() {
             {loading ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div> : electricitySettings.length === 0 ? (
               <Card className="shadow-card border-border/50"><CardContent className="py-12 text-center">
                 <div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4"><Zap className="w-8 h-8 text-muted-foreground" /></div>
-                <h3 className="font-semibold text-lg mb-2">No electricity profiles</h3>
-                <Button onClick={() => setElectricityDialogOpen(true)}><Plus className="w-4 h-4" />Add Profile</Button>
+                <h3 className="font-semibold text-lg mb-2">{t('settings.noElectricityProfiles')}</h3>
+                <Button onClick={() => setElectricityDialogOpen(true)}><Plus className="w-4 h-4" />{t('settings.addProfile')}</Button>
               </CardContent></Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
@@ -439,46 +439,46 @@ export default function Settings() {
           {/* Fixed Expenses Tab */}
           <TabsContent value="expenses" className="space-y-4">
             <div className="flex items-center justify-between">
-              <div><h2 className="text-xl font-semibold">Fixed Expenses</h2><p className="text-sm text-muted-foreground">Monthly business costs</p></div>
+              <div><h2 className="text-xl font-semibold">{t('settings.expenses')}</h2><p className="text-sm text-muted-foreground">{t('settings.manageExpenses')}</p></div>
               <Dialog open={expenseDialogOpen} onOpenChange={(open) => { setExpenseDialogOpen(open); if (!open) resetExpenseForm(); }}>
-                <DialogTrigger asChild><Button variant="secondary"><Plus className="w-4 h-4" />Add Expense</Button></DialogTrigger>
+                <DialogTrigger asChild><Button variant="secondary"><Plus className="w-4 h-4" />{t('settings.addExpense')}</Button></DialogTrigger>
                 <DialogContent className="max-w-md">
-                  <DialogHeader><DialogTitle>{editingExpense ? 'Edit' : 'Add'} Expense</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{editingExpense ? t('settings.editExpense') : t('settings.addFixedExpense')}</DialogTitle></DialogHeader>
                   <form onSubmit={handleExpenseSubmit} className="space-y-4">
-                    <div className="space-y-2"><Label>Name *</Label><Input value={expenseForm.name} onChange={(e) => setExpenseForm({ ...expenseForm, name: e.target.value })} placeholder="e.g. Rent, Internet" required /></div>
-                    <div className="space-y-2"><Label>Monthly Amount (€) *</Label><Input type="number" step="0.01" value={expenseForm.monthly_amount} onChange={(e) => setExpenseForm({ ...expenseForm, monthly_amount: e.target.value })} required /></div>
-                    <div className="flex items-center justify-between"><Label>Include in calculations</Label><Switch checked={expenseForm.is_active} onCheckedChange={(checked) => setExpenseForm({ ...expenseForm, is_active: checked })} /></div>
-                    <Button type="submit" variant="secondary" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}{editingExpense ? 'Update' : 'Add'}</Button>
+                    <div className="space-y-2"><Label>{t('common.name')} *</Label><Input value={expenseForm.name} onChange={(e) => setExpenseForm({ ...expenseForm, name: e.target.value })} placeholder="e.g. Rent, Internet" required /></div>
+                    <div className="space-y-2"><Label>{t('settings.monthlyAmount')} *</Label><Input type="number" step="0.01" value={expenseForm.monthly_amount} onChange={(e) => setExpenseForm({ ...expenseForm, monthly_amount: e.target.value })} required /></div>
+                    <div className="flex items-center justify-between"><Label>{t('common.active')}</Label><Switch checked={expenseForm.is_active} onCheckedChange={(checked) => setExpenseForm({ ...expenseForm, is_active: checked })} /></div>
+                    <Button type="submit" variant="secondary" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}{editingExpense ? t('common.update') : t('common.add')}</Button>
                   </form>
                 </DialogContent>
               </Dialog>
             </div>
-            <Card className="shadow-card border-border/50 bg-secondary/5"><CardContent className="py-4"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center"><DollarSign className="w-5 h-5 text-secondary" /></div><div><p className="font-semibold">Total Monthly</p><p className="text-sm text-muted-foreground">Active only</p></div></div><p className="text-2xl font-bold">€{totalMonthlyExpenses.toFixed(2)}</p></div></CardContent></Card>
-            {fixedExpenses.length === 0 ? <Card className="shadow-card border-border/50"><CardContent className="py-12 text-center"><div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4"><DollarSign className="w-8 h-8 text-muted-foreground" /></div><h3 className="font-semibold mb-2">No fixed expenses</h3><Button variant="secondary" onClick={() => setExpenseDialogOpen(true)}><Plus className="w-4 h-4" />Add</Button></CardContent></Card> : (
-              <div className="space-y-3">{fixedExpenses.map((e) => (<Card key={e.id} className={`shadow-card border-border/50 ${!e.is_active ? 'opacity-60' : ''}`}><CardContent className="py-4"><div className="flex items-center justify-between"><div className="flex items-center gap-4"><Switch checked={e.is_active} onCheckedChange={(c) => handleToggleExpense(e.id, c)} /><span className="font-medium">{e.name}</span></div><div className="flex items-center gap-4"><span className="font-semibold">€{e.monthly_amount.toFixed(2)}/mo</span><div className="flex gap-1"><Button variant="ghost" size="icon" onClick={() => openEditExpenseDialog(e)}><Edit className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(e.id)}><Trash2 className="w-4 h-4" /></Button></div></div></div></CardContent></Card>))}</div>
+            <Card className="shadow-card border-border/50 bg-secondary/5"><CardContent className="py-4"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center"><DollarSign className="w-5 h-5 text-secondary" /></div><div><p className="font-semibold">{t('settings.totalMonthly')}</p><p className="text-sm text-muted-foreground">{t('settings.activeExpenses')}</p></div></div><p className="text-2xl font-bold">€{totalMonthlyExpenses.toFixed(2)}</p></div></CardContent></Card>
+            {fixedExpenses.length === 0 ? <Card className="shadow-card border-border/50"><CardContent className="py-12 text-center"><div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4"><DollarSign className="w-8 h-8 text-muted-foreground" /></div><h3 className="font-semibold mb-2">{t('settings.noExpenses')}</h3><Button variant="secondary" onClick={() => setExpenseDialogOpen(true)}><Plus className="w-4 h-4" />{t('common.add')}</Button></CardContent></Card> : (
+              <div className="space-y-3">{fixedExpenses.map((e) => (<Card key={e.id} className={`shadow-card border-border/50 ${!e.is_active ? 'opacity-60' : ''}`}><CardContent className="py-4"><div className="flex items-center justify-between"><div className="flex items-center gap-4"><Switch checked={e.is_active} onCheckedChange={(c) => handleToggleExpense(e.id, c)} /><span className="font-medium">{e.name}</span></div><div className="flex items-center gap-4"><span className="font-semibold">€{e.monthly_amount.toFixed(2)}/{t('common.month')}</span><div className="flex gap-1"><Button variant="ghost" size="icon" onClick={() => openEditExpenseDialog(e)}><Edit className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(e.id)}><Trash2 className="w-4 h-4" /></Button></div></div></div></CardContent></Card>))}</div>
             )}
           </TabsContent>
 
           {/* Consumables Tab */}
           <TabsContent value="consumables" className="space-y-4">
             <div className="flex items-center justify-between">
-              <div><h2 className="text-xl font-semibold">Consumables</h2><p className="text-sm text-muted-foreground">Packaging & misc items per print</p></div>
+              <div><h2 className="text-xl font-semibold">{t('settings.consumables')}</h2><p className="text-sm text-muted-foreground">{t('settings.manageConsumables')}</p></div>
               <Dialog open={consumableDialogOpen} onOpenChange={(open) => { setConsumableDialogOpen(open); if (!open) resetConsumableForm(); }}>
-                <DialogTrigger asChild><Button variant="secondary"><Plus className="w-4 h-4" />Add Consumable</Button></DialogTrigger>
+                <DialogTrigger asChild><Button variant="secondary"><Plus className="w-4 h-4" />{t('settings.addConsumable')}</Button></DialogTrigger>
                 <DialogContent className="max-w-md">
-                  <DialogHeader><DialogTitle>{editingConsumable ? 'Edit' : 'Add'} Consumable</DialogTitle><DialogDescription>Items like boxes, labels, stickers</DialogDescription></DialogHeader>
+                  <DialogHeader><DialogTitle>{editingConsumable ? t('settings.editConsumable') : t('settings.addConsumable')}</DialogTitle><DialogDescription>{t('settings.addConsumableDescription')}</DialogDescription></DialogHeader>
                   <form onSubmit={handleConsumableSubmit} className="space-y-4">
-                    <div className="space-y-2"><Label>Name *</Label><Input value={consumableForm.name} onChange={(e) => setConsumableForm({ ...consumableForm, name: e.target.value })} placeholder="e.g. Box, Label, Sticker" required /></div>
-                    <div className="space-y-2"><Label>Cost per unit (€) *</Label><Input type="number" step="0.01" value={consumableForm.cost} onChange={(e) => setConsumableForm({ ...consumableForm, cost: e.target.value })} required /></div>
-                    <div className="flex items-center justify-between"><Label>Active</Label><Switch checked={consumableForm.is_active} onCheckedChange={(c) => setConsumableForm({ ...consumableForm, is_active: c })} /></div>
-                    <Button type="submit" variant="secondary" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}{editingConsumable ? 'Update' : 'Add'}</Button>
+                    <div className="space-y-2"><Label>{t('common.name')} *</Label><Input value={consumableForm.name} onChange={(e) => setConsumableForm({ ...consumableForm, name: e.target.value })} placeholder="e.g. Box, Label, Sticker" required /></div>
+                    <div className="space-y-2"><Label>{t('settings.unitCost')} *</Label><Input type="number" step="0.01" value={consumableForm.cost} onChange={(e) => setConsumableForm({ ...consumableForm, cost: e.target.value })} required /></div>
+                    <div className="flex items-center justify-between"><Label>{t('common.active')}</Label><Switch checked={consumableForm.is_active} onCheckedChange={(c) => setConsumableForm({ ...consumableForm, is_active: c })} /></div>
+                    <Button type="submit" variant="secondary" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}{editingConsumable ? t('common.update') : t('common.add')}</Button>
                   </form>
                 </DialogContent>
               </Dialog>
             </div>
-            <Card className="shadow-card border-border/50 bg-accent/5"><CardContent className="py-4"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center"><Package className="w-5 h-5 text-accent" /></div><div><p className="font-semibold">Total per print</p><p className="text-sm text-muted-foreground">Active only</p></div></div><p className="text-2xl font-bold">€{totalConsumablesCost.toFixed(2)}</p></div></CardContent></Card>
+            <Card className="shadow-card border-border/50 bg-accent/5"><CardContent className="py-4"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center"><Package className="w-5 h-5 text-accent" /></div><div><p className="font-semibold">{t('common.total')}</p><p className="text-sm text-muted-foreground">{t('settings.activeConsumables')}</p></div></div><p className="text-2xl font-bold">€{totalConsumablesCost.toFixed(2)}</p></div></CardContent></Card>
             <p className="text-sm text-muted-foreground">Common: Box (€0.45), Filling (€0.10), Label (€0.01), Sticker (€0.05), Rubber bands (€0.11)</p>
-            {consumables.length === 0 ? <Card className="shadow-card border-border/50"><CardContent className="py-12 text-center"><div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4"><Package className="w-8 h-8 text-muted-foreground" /></div><h3 className="font-semibold mb-2">No consumables</h3><Button variant="secondary" onClick={() => setConsumableDialogOpen(true)}><Plus className="w-4 h-4" />Add</Button></CardContent></Card> : (
+            {consumables.length === 0 ? <Card className="shadow-card border-border/50"><CardContent className="py-12 text-center"><div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4"><Package className="w-8 h-8 text-muted-foreground" /></div><h3 className="font-semibold mb-2">{t('settings.noConsumables')}</h3><Button variant="secondary" onClick={() => setConsumableDialogOpen(true)}><Plus className="w-4 h-4" />{t('common.add')}</Button></CardContent></Card> : (
               <div className="space-y-3">{consumables.map((c) => (<Card key={c.id} className={`shadow-card border-border/50 ${!c.is_active ? 'opacity-60' : ''}`}><CardContent className="py-4"><div className="flex items-center justify-between"><div className="flex items-center gap-4"><Switch checked={c.is_active} onCheckedChange={(v) => handleToggleConsumable(c.id, v)} /><span className="font-medium">{c.name}</span></div><div className="flex items-center gap-4"><span className="font-semibold">€{c.cost.toFixed(2)}</span><div className="flex gap-1"><Button variant="ghost" size="icon" onClick={() => openEditConsumableDialog(c)}><Edit className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleDeleteConsumable(c.id)}><Trash2 className="w-4 h-4" /></Button></div></div></div></CardContent></Card>))}</div>
             )}
           </TabsContent>
@@ -486,46 +486,46 @@ export default function Settings() {
           {/* Shipping Tab */}
           <TabsContent value="shipping" className="space-y-4">
             <div className="flex items-center justify-between">
-              <div><h2 className="text-xl font-semibold">Shipping Options</h2><p className="text-sm text-muted-foreground">Delivery methods and costs</p></div>
+              <div><h2 className="text-xl font-semibold">{t('settings.shipping')}</h2><p className="text-sm text-muted-foreground">{t('settings.manageShipping')}</p></div>
               <Dialog open={shippingDialogOpen} onOpenChange={(open) => { setShippingDialogOpen(open); if (!open) resetShippingForm(); }}>
-                <DialogTrigger asChild><Button variant="secondary"><Plus className="w-4 h-4" />Add Shipping</Button></DialogTrigger>
+                <DialogTrigger asChild><Button variant="secondary"><Plus className="w-4 h-4" />{t('settings.addShippingOption')}</Button></DialogTrigger>
                 <DialogContent className="max-w-md">
-                  <DialogHeader><DialogTitle>{editingShipping ? 'Edit' : 'Add'} Shipping Option</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{editingShipping ? t('settings.editShippingOption') : t('settings.addShippingOption')}</DialogTitle></DialogHeader>
                   <form onSubmit={handleShippingSubmit} className="space-y-4">
-                    <div className="space-y-2"><Label>Name *</Label><Input value={shippingForm.name} onChange={(e) => setShippingForm({ ...shippingForm, name: e.target.value })} placeholder="e.g. 24h Delivery" required /></div>
-                    <div className="space-y-2"><Label>Description</Label><Input value={shippingForm.description} onChange={(e) => setShippingForm({ ...shippingForm, description: e.target.value })} placeholder="e.g. Delivery within 24 hours" /></div>
-                    <div className="space-y-2"><Label>Price (€) *</Label><Input type="number" step="0.01" value={shippingForm.price} onChange={(e) => setShippingForm({ ...shippingForm, price: e.target.value })} required /></div>
-                    <div className="flex items-center justify-between"><Label>Active</Label><Switch checked={shippingForm.is_active} onCheckedChange={(c) => setShippingForm({ ...shippingForm, is_active: c })} /></div>
-                    <Button type="submit" variant="secondary" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}{editingShipping ? 'Update' : 'Add'}</Button>
+                    <div className="space-y-2"><Label>{t('common.name')} *</Label><Input value={shippingForm.name} onChange={(e) => setShippingForm({ ...shippingForm, name: e.target.value })} placeholder="e.g. 24h Delivery" required /></div>
+                    <div className="space-y-2"><Label>{t('common.description')}</Label><Input value={shippingForm.description} onChange={(e) => setShippingForm({ ...shippingForm, description: e.target.value })} placeholder="e.g. Delivery within 24 hours" /></div>
+                    <div className="space-y-2"><Label>{t('settings.shippingPrice')} *</Label><Input type="number" step="0.01" value={shippingForm.price} onChange={(e) => setShippingForm({ ...shippingForm, price: e.target.value })} required /></div>
+                    <div className="flex items-center justify-between"><Label>{t('common.active')}</Label><Switch checked={shippingForm.is_active} onCheckedChange={(c) => setShippingForm({ ...shippingForm, is_active: c })} /></div>
+                    <Button type="submit" variant="secondary" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}{editingShipping ? t('common.update') : t('common.add')}</Button>
                   </form>
                 </DialogContent>
               </Dialog>
             </div>
             <p className="text-sm text-muted-foreground">Suggestions: 24h (€5.28), 48h (€4.46), No shipping (€0)</p>
-            {shippingOptions.length === 0 ? <Card className="shadow-card border-border/50"><CardContent className="py-12 text-center"><div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4"><Truck className="w-8 h-8 text-muted-foreground" /></div><h3 className="font-semibold mb-2">No shipping options</h3><Button variant="secondary" onClick={() => setShippingDialogOpen(true)}><Plus className="w-4 h-4" />Add</Button></CardContent></Card> : (
+            {shippingOptions.length === 0 ? <Card className="shadow-card border-border/50"><CardContent className="py-12 text-center"><div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4"><Truck className="w-8 h-8 text-muted-foreground" /></div><h3 className="font-semibold mb-2">{t('settings.noShippingOptions')}</h3><Button variant="secondary" onClick={() => setShippingDialogOpen(true)}><Plus className="w-4 h-4" />{t('common.add')}</Button></CardContent></Card> : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{shippingOptions.map((s) => (<Card key={s.id} className={`shadow-card border-border/50 ${!s.is_active ? 'opacity-60' : ''}`}><CardHeader className="pb-3"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Truck className="w-5 h-5 text-primary" /></div><div><CardTitle className="text-lg">{s.name}</CardTitle>{s.description && <CardDescription>{s.description}</CardDescription>}</div></div><div className="flex gap-1"><Button variant="ghost" size="icon" onClick={() => openEditShippingDialog(s)}><Edit className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleDeleteShipping(s.id)}><Trash2 className="w-4 h-4" /></Button></div></div></CardHeader><CardContent><p className="text-2xl font-bold">€{s.price.toFixed(2)}</p></CardContent></Card>))}</div>
             )}
           </TabsContent>
 
           {/* Labor Rates Tab */}
           <TabsContent value="labor" className="space-y-4">
-            <div><h2 className="text-xl font-semibold">Labor Rates</h2><p className="text-sm text-muted-foreground">Hourly rates for prep and post-processing</p></div>
+            <div><h2 className="text-xl font-semibold">{t('settings.laborRates')}</h2><p className="text-sm text-muted-foreground">{t('settings.laborDescription')}</p></div>
             <Card className="shadow-card border-border/50">
               <CardContent className="pt-6">
                 <form onSubmit={handleLaborSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2"><Clock className="w-4 h-4" />Preparation Rate (€/hour)</Label>
+                      <Label className="flex items-center gap-2"><Clock className="w-4 h-4" />{t('settings.preparationRate')}</Label>
                       <Input type="number" step="0.01" value={laborForm.preparation_rate_per_hour} onChange={(e) => setLaborForm({ ...laborForm, preparation_rate_per_hour: e.target.value })} placeholder="15" />
-                      <p className="text-xs text-muted-foreground">Model prep, slicing, print start</p>
+                      <p className="text-xs text-muted-foreground">{t('prints.modelPreparation')}, {t('prints.slicingTime')}, {t('prints.printStartTime')}</p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2"><Clock className="w-4 h-4" />Post-Processing Rate (€/hour)</Label>
+                      <Label className="flex items-center gap-2"><Clock className="w-4 h-4" />{t('settings.postProcessingRate')}</Label>
                       <Input type="number" step="0.01" value={laborForm.post_processing_rate_per_hour} onChange={(e) => setLaborForm({ ...laborForm, post_processing_rate_per_hour: e.target.value })} placeholder="12" />
-                      <p className="text-xs text-muted-foreground">Remove from plate, clean supports, extra work</p>
+                      <p className="text-xs text-muted-foreground">{t('prints.removeFromPlate')}, {t('prints.cleanSupports')}, {t('prints.additionalWork')}</p>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}Save Labor Rates</Button>
+                  <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="w-4 h-4 animate-spin" />}{t('settings.saveLaborSettings')}</Button>
                 </form>
               </CardContent>
             </Card>
