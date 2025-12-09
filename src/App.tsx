@@ -126,17 +126,23 @@ function AppRoutes() {
   );
 }
 
+function AppWithProviders() {
+  return (
+    <AuthProvider>
+      <LanguageProvider>
+        <AppRoutes />
+      </LanguageProvider>
+    </AuthProvider>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
-          <LanguageProvider>
-            <AppRoutes />
-          </LanguageProvider>
-        </AuthProvider>
+        <AppWithProviders />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
