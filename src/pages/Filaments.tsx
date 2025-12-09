@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,7 @@ interface FilamentType {
 
 export default function Filaments() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [filaments, setFilaments] = useState<FilamentType[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -232,8 +234,8 @@ export default function Filaments() {
       <div className="space-y-6 animate-slide-up">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Filaments</h1>
-            <p className="text-muted-foreground mt-1">Track your filament inventory and costs</p>
+            <h1 className="font-display text-3xl font-bold">{t('filaments.title')}</h1>
+            <p className="text-muted-foreground mt-1">{t('filaments.subtitle')}</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>

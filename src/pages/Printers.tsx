@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +35,7 @@ interface ElectricitySetting {
 
 export default function Printers() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [printers, setPrinters] = useState<PrinterType[]>([]);
   const [electricitySettings, setElectricitySettings] = useState<ElectricitySetting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -237,28 +239,28 @@ export default function Printers() {
       <div className="space-y-6 animate-slide-up">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold">Printers</h1>
-            <p className="text-muted-foreground mt-1">Manage your 3D printers and their costs</p>
+            <h1 className="font-display text-3xl font-bold">{t('printers.title')}</h1>
+            <p className="text-muted-foreground mt-1">{t('printers.subtitle')}</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4" />
-                Add Printer
+                {t('printers.addNew')}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingPrinter ? 'Edit Printer' : 'Add Printer'}</DialogTitle>
-                <DialogDescription>Select a known printer to auto-fill specs, or enter manually</DialogDescription>
+                <DialogTitle>{editingPrinter ? t('printers.editPrinter') : t('printers.addNew')}</DialogTitle>
+                <DialogDescription>{t('printers.dialogDescription')}</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="brand">Brand</Label>
+                    <Label htmlFor="brand">{t('printers.brand')}</Label>
                     <Select value={form.brand} onValueChange={handleBrandChange}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select brand" />
+                        <SelectValue placeholder={t('printers.selectBrand')} />
                       </SelectTrigger>
                       <SelectContent>
                         {PRINTER_BRANDS.map((brand) => (
@@ -268,17 +270,17 @@ export default function Printers() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="model">Model</Label>
+                    <Label htmlFor="model">{t('printers.model')}</Label>
                     {availableModels.length > 0 && !useCustomModel ? (
                       <Select value={form.model} onValueChange={handleModelChange}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select model" />
+                          <SelectValue placeholder={t('printers.selectModel')} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableModels.map((model) => (
                             <SelectItem key={model} value={model}>{model}</SelectItem>
                           ))}
-                          <SelectItem value="__custom__">Other (custom)</SelectItem>
+                          <SelectItem value="__custom__">{t('printers.otherCustom')}</SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (
@@ -297,7 +299,7 @@ export default function Printers() {
                             className="h-auto p-0 text-xs"
                             onClick={() => setUseCustomModel(false)}
                           >
-                            Choose from list instead
+                            {t('printers.chooseFromList')}
                           </Button>
                         )}
                       </div>
@@ -306,7 +308,7 @@ export default function Printers() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="name">Printer Name *</Label>
+                  <Label htmlFor="name">{t('printers.printerName')} *</Label>
                   <Input
                     id="name"
                     value={form.name}
@@ -320,14 +322,14 @@ export default function Printers() {
                   <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-2">
                     <Sparkles className="w-4 h-4 text-primary mt-0.5" />
                     <p className="text-sm text-primary">
-                      Specs auto-filled from known printer database
+                      {t('printers.specsAutoFilled')}
                     </p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="purchase_cost">Purchase Cost (€)</Label>
+                    <Label htmlFor="purchase_cost">{t('printers.purchaseCost')} (€)</Label>
                     <Input
                       id="purchase_cost"
                       type="number"
@@ -338,7 +340,7 @@ export default function Printers() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="maintenance_cost">Maintenance Cost (€)</Label>
+                    <Label htmlFor="maintenance_cost">{t('printers.maintenanceCost')} (€)</Label>
                     <Input
                       id="maintenance_cost"
                       type="number"
@@ -352,7 +354,7 @@ export default function Printers() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="depreciation_hours">Depreciation (hours)</Label>
+                    <Label htmlFor="depreciation_hours">{t('printers.depreciationHours')}</Label>
                     <Input
                       id="depreciation_hours"
                       type="number"
@@ -369,7 +371,7 @@ export default function Printers() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="power_watts">Power Usage (watts)</Label>
+                    <Label htmlFor="power_watts">{t('printers.powerWatts')}</Label>
                     <Input
                       id="power_watts"
                       type="number"
@@ -382,13 +384,13 @@ export default function Printers() {
 
                 {electricitySettings.length > 0 && (
                   <div className="space-y-2">
-                    <Label htmlFor="electricity">Default Electricity Profile</Label>
+                    <Label htmlFor="electricity">{t('printers.defaultElectricity')}</Label>
                     <Select
                       value={form.default_electricity_settings_id}
                       onValueChange={(v) => setForm({ ...form, default_electricity_settings_id: v })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select profile (optional)" />
+                        <SelectValue placeholder={t('printers.selectProfile')} />
                       </SelectTrigger>
                       <SelectContent>
                         {electricitySettings.map((es) => (
@@ -399,7 +401,7 @@ export default function Printers() {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
+                  <Label htmlFor="notes">{t('common.notes')}</Label>
                   <Textarea
                     id="notes"
                     value={form.notes}
@@ -409,7 +411,7 @@ export default function Printers() {
                 </div>
                 <Button type="submit" className="w-full" disabled={saving}>
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {editingPrinter ? 'Update Printer' : 'Add Printer'}
+                  {editingPrinter ? t('common.update') : t('common.add')}
                 </Button>
               </form>
             </DialogContent>
@@ -426,11 +428,11 @@ export default function Printers() {
               <div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
                 <Printer className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">No printers yet</h3>
-              <p className="text-muted-foreground mb-4">Add your first printer to start tracking costs</p>
+              <h3 className="font-semibold text-lg mb-2">{t('printers.noPrintersYet')}</h3>
+              <p className="text-muted-foreground mb-4">{t('printers.addFirstPrinter')}</p>
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus className="w-4 h-4" />
-                Add Printer
+                {t('printers.addNew')}
               </Button>
             </CardContent>
           </Card>
@@ -463,23 +465,23 @@ export default function Printers() {
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Purchase Cost</span>
+                    <span className="text-muted-foreground">{t('printers.purchaseCost')}</span>
                     <span className="font-medium">€{printer.purchase_cost.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Maintenance</span>
+                    <span className="text-muted-foreground">{t('printers.maintenanceCost')}</span>
                     <span className="font-medium">€{(printer.maintenance_cost || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Depreciation</span>
+                    <span className="text-muted-foreground">{t('printers.depreciationHours')}</span>
                     <span className="font-medium">{printer.depreciation_hours || 5000}h</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Power</span>
+                    <span className="text-muted-foreground">{t('printers.powerWatts')}</span>
                     <span className="font-medium">{printer.power_watts}W</span>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
-                    <span>Cost/hour</span>
+                    <span>{t('printers.costPerHour')}</span>
                     <span>€{((printer.purchase_cost + (printer.maintenance_cost || 0)) / (printer.depreciation_hours || 5000)).toFixed(4)}</span>
                   </div>
                 </CardContent>

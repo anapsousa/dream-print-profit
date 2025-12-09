@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +55,7 @@ interface LaborSetting {
 
 export default function Settings() {
   const { user, subscription, refreshSubscription } = useAuth();
+  const { t } = useLanguage();
   const [electricitySettings, setElectricitySettings] = useState<ElectricitySetting[]>([]);
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
   const [consumables, setConsumables] = useState<Consumable[]>([]);
@@ -356,18 +358,18 @@ export default function Settings() {
     <AppLayout>
       <div className="space-y-6 animate-slide-up">
         <div>
-          <h1 className="font-display text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-1">Manage electricity, expenses, consumables, shipping, and subscription</p>
+          <h1 className="font-display text-3xl font-bold">{t('settings.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('settings.subtitle')}</p>
         </div>
 
         <Tabs defaultValue="electricity" className="space-y-6">
           <TabsList className="flex-wrap h-auto gap-1">
-            <TabsTrigger value="electricity">Electricity</TabsTrigger>
-            <TabsTrigger value="expenses">Fixed Expenses</TabsTrigger>
-            <TabsTrigger value="consumables">Consumables</TabsTrigger>
-            <TabsTrigger value="shipping">Shipping</TabsTrigger>
-            <TabsTrigger value="labor">Labor Rates</TabsTrigger>
-            <TabsTrigger value="subscription">Subscription</TabsTrigger>
+            <TabsTrigger value="electricity">{t('settings.electricity')}</TabsTrigger>
+            <TabsTrigger value="expenses">{t('settings.expenses')}</TabsTrigger>
+            <TabsTrigger value="consumables">{t('settings.consumables')}</TabsTrigger>
+            <TabsTrigger value="shipping">{t('settings.shipping')}</TabsTrigger>
+            <TabsTrigger value="labor">{t('settings.labor')}</TabsTrigger>
+            <TabsTrigger value="subscription">{t('settings.subscription')}</TabsTrigger>
           </TabsList>
 
           {/* Electricity Tab */}
