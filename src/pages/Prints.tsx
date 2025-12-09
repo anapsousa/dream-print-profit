@@ -13,7 +13,6 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { SUBSCRIPTION_TIERS } from '@/lib/constants';
 import { Plus, FileText, Loader2, Clock, Package, Truck, Wrench, Scissors, Search, Filter, ArrowUpDown, Trash2, Download, CheckSquare, Copy, Save, FolderOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PrintListItem } from '@/components/prints/PrintListItem';
@@ -127,7 +126,7 @@ interface TemplateType {
 const DISCOUNT_PERCENTAGES = [0, 5, 10, 20, 30, 50];
 
 export default function Prints() {
-  const { user, subscription } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [prints, setPrints] = useState<PrintType[]>([]);
@@ -178,8 +177,7 @@ export default function Prints() {
   const [printFilaments, setPrintFilaments] = useState<Record<string, PrintFilamentDB[]>>({});
   const [selectedConsumables, setSelectedConsumables] = useState<string[]>([]);
 
-  const tierInfo = SUBSCRIPTION_TIERS[subscription.tier];
-  const canAddPrint = prints.length < tierInfo.maxPrints;
+  const canAddPrint = true; // No subscription limits
 
   useEffect(() => {
     fetchData();

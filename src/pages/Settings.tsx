@@ -12,9 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { SUBSCRIPTION_TIERS } from '@/lib/constants';
-import { Plus, Zap, DollarSign, Edit, Trash2, Loader2, Crown, ExternalLink, Package, Truck, Clock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Zap, DollarSign, Edit, Trash2, Loader2, Package, Truck, Clock } from 'lucide-react';
 
 interface ElectricitySetting {
   id: string;
@@ -54,7 +52,7 @@ interface LaborSetting {
 }
 
 export default function Settings() {
-  const { user, subscription, refreshSubscription } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const [electricitySettings, setElectricitySettings] = useState<ElectricitySetting[]>([]);
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
@@ -71,7 +69,7 @@ export default function Settings() {
   const [editingConsumable, setEditingConsumable] = useState<Consumable | null>(null);
   const [editingShipping, setEditingShipping] = useState<ShippingOption | null>(null);
   const [saving, setSaving] = useState(false);
-  const [managingPortal, setManagingPortal] = useState(false);
+  
   const { toast } = useToast();
 
   const [electricityForm, setElectricityForm] = useState({
@@ -106,7 +104,7 @@ export default function Settings() {
     post_processing_rate_per_hour: '12',
   });
 
-  const tierInfo = SUBSCRIPTION_TIERS[subscription.tier];
+  
 
   useEffect(() => {
     fetchData();
@@ -339,17 +337,6 @@ export default function Settings() {
     else { toast({ title: 'Labor settings saved' }); fetchData(); }
   }
 
-  async function handleManageSubscription() {
-    setManagingPortal(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('customer-portal');
-      if (error) throw error;
-      if (data?.url) window.open(data.url, '_blank');
-    } catch {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not open subscription management' });
-    }
-    setManagingPortal(false);
-  }
 
   const totalMonthlyExpenses = fixedExpenses.filter(e => e.is_active).reduce((sum, e) => sum + e.monthly_amount, 0);
   const totalConsumablesCost = consumables.filter(c => c.is_active).reduce((sum, c) => sum + c.cost, 0);
@@ -369,7 +356,7 @@ export default function Settings() {
             <TabsTrigger value="consumables">{t('settings.consumables')}</TabsTrigger>
             <TabsTrigger value="shipping">{t('settings.shipping')}</TabsTrigger>
             <TabsTrigger value="labor">{t('settings.labor')}</TabsTrigger>
-            <TabsTrigger value="subscription">{t('settings.subscription')}</TabsTrigger>
+            
           </TabsList>
 
           {/* Electricity Tab */}
@@ -544,28 +531,6 @@ export default function Settings() {
             </Card>
           </TabsContent>
 
-          {/* Subscription Tab */}
-          <TabsContent value="subscription" className="space-y-4">
-            <div><h2 className="text-xl font-semibold">Your Subscription</h2><p className="text-sm text-muted-foreground">Manage your plan</p></div>
-            <Card className="shadow-card border-border/50">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  {subscription.tier !== 'free' && <Crown className="w-6 h-6 text-accent" />}
-                  <div><CardTitle>{tierInfo.name} Plan</CardTitle><CardDescription>{tierInfo.price === 0 ? 'Free' : `€${tierInfo.price}/month`}</CardDescription></div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 rounded-xl bg-muted/50 space-y-2">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Max saved prints</span><span className="font-medium">{tierInfo.maxPrints}</span></div>
-                  {subscription.subscriptionEnd && <div className="flex justify-between"><span className="text-muted-foreground">Renews on</span><span className="font-medium">{new Date(subscription.subscriptionEnd).toLocaleDateString()}</span></div>}
-                </div>
-                <div className="flex gap-3">
-                  {subscription.tier === 'free' ? <Button variant="accent" asChild className="flex-1"><Link to="/pricing">Upgrade Plan</Link></Button> : <Button variant="outline" onClick={handleManageSubscription} disabled={managingPortal} className="flex-1">{managingPortal ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}Manage Subscription</Button>}
-                  <Button variant="ghost" onClick={refreshSubscription}>Refresh</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>

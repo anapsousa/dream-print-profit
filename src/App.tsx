@@ -13,7 +13,6 @@ import Printers from "./pages/Printers";
 import Filaments from "./pages/Filaments";
 import Prints from "./pages/Prints";
 import Settings from "./pages/Settings";
-import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminPrinters from "./pages/admin/AdminPrinters";
@@ -49,7 +48,6 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<Auth />} />
-      <Route path="/pricing" element={<Pricing />} />
       <Route
         path="/dashboard"
         element={
