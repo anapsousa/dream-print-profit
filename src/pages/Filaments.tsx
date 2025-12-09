@@ -139,8 +139,8 @@ export default function Filaments() {
         cost_per_gram: (preset.costPerKg / 1000).toFixed(4),
       }));
       toast({
-        title: 'Preset applied',
-        description: `Cost: €${preset.costPerKg}/kg`,
+        title: t('filaments.presetApplied'),
+        description: `${t('filaments.presetAppliedCost')}: €${preset.costPerKg}/kg`,
       });
     } else {
       updateAutoName(form.brand, material, form.color);
@@ -204,9 +204,9 @@ export default function Filaments() {
     setSaving(false);
 
     if (error) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
     } else {
-      toast({ title: editingFilament ? 'Filament updated' : 'Filament added' });
+      toast({ title: editingFilament ? t('filaments.filamentUpdated') : t('filaments.filamentAdded') });
       setDialogOpen(false);
       resetForm();
       fetchFilaments();
@@ -214,14 +214,14 @@ export default function Filaments() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Are you sure you want to delete this filament?')) return;
+    if (!confirm(t('filaments.confirmDelete'))) return;
 
     const { error } = await supabase.from('filaments').delete().eq('id', id);
 
     if (error) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast({ variant: 'destructive', title: t('error.generic'), description: error.message });
     } else {
-      toast({ title: 'Filament deleted' });
+      toast({ title: t('filaments.filamentDeleted') });
       fetchFilaments();
     }
   }
@@ -241,20 +241,20 @@ export default function Filaments() {
             <DialogTrigger asChild>
               <Button variant="secondary">
                 <Plus className="w-4 h-4" />
-                Add Filament
+                {t('filaments.addNew')}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingFilament ? 'Edit Filament' : 'Add Filament'}</DialogTitle>
-                <DialogDescription>Select a brand to use preset prices, or enter manually</DialogDescription>
+                <DialogTitle>{editingFilament ? t('filaments.editFilament') : t('filaments.addNew')}</DialogTitle>
+                <DialogDescription>{t('filaments.dialogDescription')}</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="brand">Brand</Label>
+                  <Label htmlFor="brand">{t('printers.brand')}</Label>
                   <Select value={form.brand} onValueChange={handleBrandChange}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select brand" />
+                      <SelectValue placeholder={t('filaments.selectBrand')} />
                     </SelectTrigger>
                     <SelectContent>
                       {FILAMENT_BRANDS.map((brand) => (
@@ -266,10 +266,10 @@ export default function Filaments() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="material">Material</Label>
+                    <Label htmlFor="material">{t('filaments.material')}</Label>
                     <Select value={form.material} onValueChange={handleMaterialChange}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select material" />
+                        <SelectValue placeholder={t('filaments.selectMaterial')} />
                       </SelectTrigger>
                       <SelectContent>
                         {availableMaterials.map((material) => (
@@ -279,16 +279,16 @@ export default function Filaments() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="color">Color</Label>
+                    <Label htmlFor="color">{t('filaments.color')}</Label>
                     <Select value={form.color} onValueChange={handleColorChange}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select color" />
+                        <SelectValue placeholder={t('filaments.selectColor')} />
                       </SelectTrigger>
                       <SelectContent>
                         {allColors.map((color) => (
                           <SelectItem key={color} value={color}>{color}</SelectItem>
                         ))}
-                        <SelectItem value="__custom__">+ Add new color</SelectItem>
+                        <SelectItem value="__custom__">{t('filaments.addNewColor')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -296,7 +296,7 @@ export default function Filaments() {
 
                 {form.color === '__custom__' && (
                   <div className="space-y-2">
-                    <Label htmlFor="customColor">New Color Name</Label>
+                    <Label htmlFor="customColor">{t('filaments.newColorName')}</Label>
                     <Input
                       id="customColor"
                       value={form.customColor}
@@ -307,7 +307,7 @@ export default function Filaments() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="name">Filament Name *</Label>
+                  <Label htmlFor="name">{t('filaments.filamentName')} *</Label>
                   <Input
                     id="name"
                     value={form.name}
@@ -315,23 +315,23 @@ export default function Filaments() {
                     placeholder="e.g. PLA+ Black"
                     required
                   />
-                  <p className="text-xs text-muted-foreground">Auto-generated from brand + material + color, or enter custom</p>
+                  <p className="text-xs text-muted-foreground">{t('filaments.autoGenerated')}</p>
                 </div>
 
                 {showPresetNotice && (
                   <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 flex items-start gap-2">
                     <Sparkles className="w-4 h-4 text-secondary mt-0.5" />
                     <p className="text-sm text-secondary">
-                      Prices auto-filled from preset database
+                      {t('filaments.presetApplied')}
                     </p>
                   </div>
                 )}
 
                 <div className="p-4 rounded-xl bg-muted/50 space-y-4">
-                  <p className="text-sm font-medium">Calculate from spool</p>
+                  <p className="text-sm font-medium">{t('filaments.calculateFromSpool')}</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="spool_cost">Spool Cost (€)</Label>
+                      <Label htmlFor="spool_cost">{t('filaments.spoolCost')} (€)</Label>
                       <Input
                         id="spool_cost"
                         type="number"
@@ -342,7 +342,7 @@ export default function Filaments() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="spool_weight">Spool Weight (g)</Label>
+                      <Label htmlFor="spool_weight">{t('filaments.spoolWeight')}</Label>
                       <Input
                         id="spool_weight"
                         type="number"
@@ -354,7 +354,7 @@ export default function Filaments() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="cost_per_gram">Cost Per Gram (€) *</Label>
+                  <Label htmlFor="cost_per_gram">{t('filaments.costPerGram')} (€) *</Label>
                   <Input
                     id="cost_per_gram"
                     type="number"
@@ -364,11 +364,11 @@ export default function Filaments() {
                     placeholder="0.02"
                     required
                   />
-                  <p className="text-xs text-muted-foreground">Auto-calculated from spool info, or enter manually</p>
+                  <p className="text-xs text-muted-foreground">{t('filaments.autoCalculated')}</p>
                 </div>
                 <Button type="submit" variant="secondary" className="w-full" disabled={saving}>
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {editingFilament ? 'Update Filament' : 'Add Filament'}
+                  {editingFilament ? t('filaments.updateFilament') : t('filaments.addNew')}
                 </Button>
               </form>
             </DialogContent>
@@ -385,11 +385,11 @@ export default function Filaments() {
               <div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
                 <Package className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">No filaments yet</h3>
-              <p className="text-muted-foreground mb-4">Add your filament types to track material costs</p>
+              <h3 className="font-semibold text-lg mb-2">{t('filaments.noFilamentsYet')}</h3>
+              <p className="text-muted-foreground mb-4">{t('filaments.addFirstFilament')}</p>
               <Button variant="secondary" onClick={() => setDialogOpen(true)}>
                 <Plus className="w-4 h-4" />
-                Add Filament
+                {t('filaments.addNew')}
               </Button>
             </CardContent>
           </Card>
@@ -425,11 +425,11 @@ export default function Filaments() {
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cost per gram</span>
+                    <span className="text-muted-foreground">{t('filaments.costPerGram')}</span>
                     <span className="font-medium">€{filament.cost_per_gram.toFixed(4)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cost per kg</span>
+                    <span className="text-muted-foreground">{t('filaments.costPerKg')}</span>
                     <span className="font-medium">€{(filament.cost_per_gram * 1000).toFixed(2)}</span>
                   </div>
                   {filament.spool_cost && (
