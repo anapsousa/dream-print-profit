@@ -52,9 +52,6 @@ export default function Index() {
           <Logo size="md" />
           <div className="flex items-center gap-4">
             <LanguageSwitcherCompact />
-            <Button variant="ghost" asChild>
-              <Link to="/pricing">{t('nav.pricing')}</Link>
-            </Button>
             <Button asChild>
               <Link to="/auth">{t('nav.getStarted')}</Link>
             </Button>
@@ -77,9 +74,6 @@ export default function Index() {
                   {t('landing.hero.startFree')}
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-              </Button>
-              <Button size="xl" variant="outline" asChild>
-                <Link to="/pricing">{t('landing.hero.viewPricing')}</Link>
               </Button>
             </div>
           </div>

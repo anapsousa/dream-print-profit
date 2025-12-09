@@ -1,13 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { SUBSCRIPTION_TIERS } from '@/lib/constants';
 import { CostTrendsChart } from '@/components/dashboard/CostTrendsChart';
 import { ProfitAnalysisChart } from '@/components/dashboard/ProfitAnalysisChart';
 import { CostBreakdownChart } from '@/components/dashboard/CostBreakdownChart';
@@ -91,7 +89,7 @@ interface LaborData {
 }
 
 export default function Dashboard() {
-  const { user, subscription, refreshSubscription } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const [stats, setStats] = useState<Stats>({ 
     printerCount: 0, filamentCount: 0, printCount: 0, 
@@ -107,8 +105,6 @@ export default function Dashboard() {
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpenseData[]>([]);
   const [shipping, setShipping] = useState<ShippingData[]>([]);
   const [labor, setLabor] = useState<LaborData | null>(null);
-  const { toast } = useToast();
-  const [searchParams] = useSearchParams();
 
   // Check if onboarding should be shown
   useEffect(() => {
@@ -134,16 +130,6 @@ export default function Dashboard() {
       checkInitialSetup();
     }
   }, [user]);
-
-  useEffect(() => {
-    if (searchParams.get('subscription') === 'success') {
-      toast({
-        title: t('subscription.activated'),
-        description: t('subscription.thankYou'),
-      });
-      refreshSubscription();
-    }
-  }, [searchParams, toast, refreshSubscription, t]);
 
   useEffect(() => {
     async function fetchData() {
@@ -283,8 +269,6 @@ export default function Dashboard() {
     ];
   }, [printCalculations, t]);
 
-  const tierInfo = SUBSCRIPTION_TIERS[subscription.tier];
-  const usagePercent = Math.min((stats.printCount / tierInfo.maxPrints) * 100, 100);
 
   // Show onboarding wizard for new users
   if (showOnboarding) {
@@ -337,32 +321,6 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Usage Progress */}
-        <Card className="shadow-card border-border/50 overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold">{t('dashboard.printStorage')}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {stats.printCount} {t('dashboard.of')} {tierInfo.maxPrints} {t('dashboard.printsUsed')}
-                </p>
-              </div>
-              {subscription.tier === 'free' && (
-                <Button variant="accent" size="sm" asChild>
-                  <Link to="/pricing">{t('dashboard.upgrade')}</Link>
-                </Button>
-              )}
-            </div>
-            <div className="h-3 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full gradient-primary transition-all duration-500"
-                style={{ width: `${usagePercent}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="shadow-card border-border/50">
             <CardContent className="p-6">

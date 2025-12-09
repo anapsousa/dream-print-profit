@@ -15,14 +15,12 @@ import {
   LogOut, 
   Menu, 
   X,
-  Crown,
   Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SUBSCRIPTION_TIERS } from '@/lib/constants';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, signOut, subscription } = useAuth();
+  const { user, signOut } = useAuth();
   const { t } = useLanguage();
   const { isAdmin } = useAdmin();
   const location = useLocation();
@@ -33,8 +31,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     await signOut();
     navigate('/');
   };
-
-  const tierInfo = SUBSCRIPTION_TIERS[subscription.tier];
 
   const navigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
@@ -110,22 +106,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             )}
           </nav>
-
-          {/* Subscription badge */}
-          <div className="mb-4 p-4 rounded-xl bg-muted/50 border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              {subscription.tier !== 'free' && <Crown className="w-4 h-4 text-accent" />}
-              <span className="text-sm font-semibold">{tierInfo.name} Plan</span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-2">
-              Up to {tierInfo.maxPrints} saved prints
-            </p>
-            {subscription.tier === 'free' && (
-              <Button size="sm" variant="accent" className="w-full" asChild>
-                <Link to="/pricing">Upgrade</Link>
-              </Button>
-            )}
-          </div>
 
           {/* User section */}
           <div className="border-t border-border pt-4">
