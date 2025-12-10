@@ -108,7 +108,6 @@ interface LaborSettingType {
 }
 
 interface GeneralSettingType {
-  vat_tax_rate: number;
   default_profit_margin: number;
   default_electricity_rate: number;
   default_labor_rate: number;
@@ -195,7 +194,7 @@ export default function Prints() {
   async function fetchData() {
     if (!user) return;
 
-    const [printsRes, printersRes, filamentsRes, electricityRes, expensesRes, consumablesRes, shippingRes, laborRes, generalRes, templatesRes] = await Promise.all([
+    const [printsRes, printersRes, filamentsRes, electricityRes, expensesRes, consumablesRes, shippingRes, laborRes, templatesRes] = await Promise.all([
       supabase.from('prints').select('*').order('created_at', { ascending: false }),
       supabase.from('printers').select('id, name, purchase_cost, depreciation_months, depreciation_hours, maintenance_cost, power_watts, default_electricity_settings_id'),
       supabase.from('filaments').select('id, name, cost_per_gram'),
@@ -204,7 +203,6 @@ export default function Prints() {
       supabase.from('consumables').select('*'),
       supabase.from('shipping_options').select('*'),
       supabase.from('labor_settings').select('*').limit(1).single(),
-      supabase.from('general_settings').select('vat_tax_rate, default_profit_margin, default_electricity_rate, default_labor_rate, failure_margin').eq('user_id', user.id).limit(1).single(),
       supabase.from('print_templates').select('*').order('name'),
     ]);
 
@@ -216,7 +214,6 @@ export default function Prints() {
     if (consumablesRes.data) setConsumables(consumablesRes.data);
     if (shippingRes.data) setShippingOptions(shippingRes.data);
     if (laborRes.data) setLaborSettings(laborRes.data);
-    if (generalRes.data) setGeneralSettings(generalRes.data);
     if (templatesRes.data) setTemplates(templatesRes.data as TemplateType[]);
     setLoading(false);
   }
@@ -354,26 +351,21 @@ export default function Prints() {
     const profitAmount = totalCost * (profitMargin / 100);
     const priceBeforeDiscount = totalCost + profitAmount;
 
-    // Apply VAT/Tax to the final price
-    const vatRate = generalSettings?.vat_tax_rate || 20;
-    const priceWithVAT = priceBeforeDiscount * (1 + vatRate / 100);
-
     const discountTable = DISCOUNT_PERCENTAGES.map(discountPct => {
-      const discountedPrice = priceWithVAT * (1 - discountPct / 100);
-      const discountAmount = priceWithVAT * (discountPct / 100);
+      const discountedPrice = priceBeforeDiscount * (1 - discountPct / 100);
+      const discountAmount = priceBeforeDiscount * (discountPct / 100);
       const potentialProfit = discountedPrice - totalCost;
       return { discountPct, discountedPrice, discountAmount, potentialProfit, finalPrice: discountedPrice };
     });
 
     const currentDiscount = parseFloat(form.discount_percent) || 0;
-    const recommendedPrice = priceWithVAT * (1 - currentDiscount / 100);
+    const recommendedPrice = priceBeforeDiscount * (1 - currentDiscount / 100);
     const profit = recommendedPrice - totalCost;
 
     return {
       filamentCost, energyCost, depreciationCost, fixedCostShare, extraCosts,
       preparationCost, postProcessingCost, shippingCost, consumablesCost,
-      failureMarginAmount, totalCost, priceBeforeDiscount, priceWithVAT, recommendedPrice, profit, profitAmount, discountTable,
-      vatRate, vatAmount: priceBeforeDiscount * (vatRate / 100),
+      failureMarginAmount, totalCost, priceBeforeDiscount, recommendedPrice, profit, profitAmount, discountTable,
     };
   }, [form, printers, electricitySettings, fixedExpenses, shippingOptions, laborSettings, generalSettings, totalConsumablesCost, totalFilamentCost]);
 
@@ -571,17 +563,13 @@ export default function Prints() {
     const discount = print.discount_percent || 0;
     const priceBeforeDiscount = totalCost * (1 + profitMargin / 100);
     
-    // Apply VAT/Tax to the final price
-    const vatRate = generalSettings?.vat_tax_rate || 20;
-    const priceWithVAT = priceBeforeDiscount * (1 + vatRate / 100);
-    
-    const recommendedPrice = priceWithVAT * (1 - discount / 100);
+    const recommendedPrice = priceBeforeDiscount * (1 - discount / 100);
     const profit = recommendedPrice - totalCost;
     const profitAmount = totalCost * (profitMargin / 100);
 
     const discountTable = DISCOUNT_PERCENTAGES.map(discountPct => {
-      const discountedPrice = priceWithVAT * (1 - discountPct / 100);
-      const discountAmount = priceWithVAT * (discountPct / 100);
+      const discountedPrice = priceBeforeDiscount * (1 - discountPct / 100);
+      const discountAmount = priceBeforeDiscount * (discountPct / 100);
       const potentialProfit = discountedPrice - totalCost;
       return { discountPct, discountedPrice, discountAmount, potentialProfit, finalPrice: discountedPrice };
     });
@@ -589,8 +577,7 @@ export default function Prints() {
     return { 
       filamentCost, energyCost, depreciationCost, fixedCostShare, extraCosts,
       preparationCost, postProcessingCost, shippingCost, consumablesCost,
-      failureMarginAmount, totalCost, priceBeforeDiscount, priceWithVAT, recommendedPrice, profit, profitAmount, discountTable,
-      vatRate, vatAmount: priceBeforeDiscount * (vatRate / 100),
+      failureMarginAmount, totalCost, priceBeforeDiscount, recommendedPrice, profit, profitAmount, discountTable,
       printer, filament 
     };
   }
