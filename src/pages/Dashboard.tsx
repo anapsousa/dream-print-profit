@@ -89,7 +89,6 @@ interface LaborData {
 }
 
 interface GeneralSettingData {
-  vat_tax_rate: number;
   default_profit_margin: number;
   default_electricity_rate: number;
   default_labor_rate: number;
@@ -114,8 +113,6 @@ export default function Dashboard() {
   const [shipping, setShipping] = useState<ShippingData[]>([]);
   const [labor, setLabor] = useState<LaborData | null>(null);
   const [generalSettings, setGeneralSettings] = useState<GeneralSettingData | null>(null);
-  const { toast } = useToast();
-  const [searchParams] = useSearchParams();
 
   // Check if onboarding should be shown
   useEffect(() => {
@@ -146,7 +143,7 @@ export default function Dashboard() {
     async function fetchData() {
       if (!user) return;
 
-      const [printersRes, filamentsRes, printsRes, electricityRes, expensesRes, shippingRes, laborRes, generalRes] = await Promise.all([
+      const [printersRes, filamentsRes, printsRes, electricityRes, expensesRes, shippingRes, laborRes] = await Promise.all([
         supabase.from('printers').select('id, purchase_cost, depreciation_hours, maintenance_cost, power_watts, default_electricity_settings_id'),
         supabase.from('filaments').select('id, cost_per_gram'),
         supabase.from('prints').select('*').order('created_at', { ascending: true }),
@@ -154,7 +151,6 @@ export default function Dashboard() {
         supabase.from('fixed_expenses').select('monthly_amount, is_active'),
         supabase.from('shipping_options').select('id, price'),
         supabase.from('labor_settings').select('*').limit(1).single(),
-        supabase.from('general_settings').select('vat_tax_rate, default_profit_margin, default_electricity_rate, default_labor_rate, failure_margin').eq('user_id', user.id).limit(1).single(),
       ]);
 
       if (printersRes.data) setPrinters(printersRes.data);
@@ -162,9 +158,7 @@ export default function Dashboard() {
       if (printsRes.data) setPrints(printsRes.data as PrintData[]);
       if (electricityRes.data) setElectricity(electricityRes.data);
       if (expensesRes.data) setFixedExpenses(expensesRes.data);
-      if (shippingRes.data) setShipping(shippingRes.data);
       if (laborRes.data) setLabor(laborRes.data);
-      if (generalRes.data) setGeneralSettings(generalRes.data);
 
       setStats(prev => ({
         ...prev,
@@ -222,11 +216,7 @@ export default function Dashboard() {
       const discount = print.discount_percent || 0;
       const priceBeforeDiscount = totalCost * (1 + profitMargin / 100);
       
-      // Apply VAT/Tax to the final price
-      const vatRate = generalSettings?.vat_tax_rate || 20;
-      const priceWithVAT = priceBeforeDiscount * (1 + vatRate / 100);
-      
-      const recommendedPrice = priceWithVAT * (1 - discount / 100);
+      const recommendedPrice = priceBeforeDiscount * (1 - discount / 100);
       const profit = recommendedPrice - totalCost;
 
       return {
